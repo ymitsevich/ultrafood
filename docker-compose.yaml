@@ -1,0 +1,13 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3123:3123"
+    volumes:
+      - .:/app:rw
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: true
+    command: npm run dev
