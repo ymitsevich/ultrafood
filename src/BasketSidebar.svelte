@@ -24,7 +24,13 @@
         {:else}
             {#each $basket as item, index (index)}
                 <div class="basket-item">
-                    <div class="basket-item-emoji">{item.emoji}</div>
+                    <div class="basket-item-visual">
+                        {#if item.imageData}
+                            <img src={item.imageData} alt={item.name} class="basket-item-image"/>
+                        {:else}
+                            <div class="basket-item-emoji">{item.emoji}</div>
+                        {/if}
+                    </div>
                     <div class="basket-item-details">
                         <div class="basket-item-name">{item.name}</div>
                         <div class="basket-item-amount">{item.amount}</div>
@@ -51,9 +57,11 @@
 <style>
     .submit-buttons {
         display: flex;
-        justify-content: center;
+        flex-direction: column; /* Changed from row to column */
+        align-items: center;     /* Center buttons horizontally */
         gap: 10px;
-        margin: 10px 5px;
+        margin: 15px 5px;
+        width: 100%;
     }
 
     .submit-basket {
@@ -69,6 +77,7 @@
         justify-content: center;
         width: 50px;
         height: 50px;
+        flex-shrink: 0;
     }
 
     .now-btn {
@@ -81,5 +90,26 @@
 
     .time-btn:hover {
         background-color: #a35a42;
+    }
+
+    .basket-item-visual {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+        margin-right: 10px;
+    }
+    
+    .basket-item-emoji {
+        font-size: 24px;
+    }
+    
+    .basket-item-image {
+        width: 40px;
+        height: 40px;
+        border-radius: 6px;
+        object-fit: cover;
     }
 </style>

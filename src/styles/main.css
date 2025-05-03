@@ -141,25 +141,25 @@ body {
 .categories {
     display: flex;
     overflow-x: auto;
-    padding: 15px 10px; /* Increased padding for larger buttons */
+    padding: 20px 15px; /* Increased padding for larger buttons */
     background-color: #f8f9fa; /* Changed background color to match body background to eliminate stripe */
     -webkit-overflow-scrolling: touch;
 }
 
 .category-btn {
     flex: 0 0 auto;
-    padding: 12px 22px; /* Increased padding for larger buttons */
-    margin: 0 6px; /* Increased margin between buttons */
+    padding: 20px 40px; /* Increased 2x from previous 12px 22px */
+    margin: 0 12px; /* Doubled margin */
     background-color: white;
     border: none;
-    border-radius: 20px;
-    font-size: 18px; /* Increased font size */
+    border-radius: 30px; /* Increased from 20px */
+    font-size: 28px; /* Increased 2x from previous 14px */
     font-weight: bold;
     color: #555;
     white-space: nowrap;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15); /* Enhanced shadow */
 }
 
 .category-btn.active {
