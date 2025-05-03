@@ -1,167 +1,172 @@
 <script>
     import { onMount, afterUpdate } from 'svelte';
     
+    // Exported props
     export let showModal = false;
     export let onAddFood;
     
+    // Local state
     let foodName = '';
     let foodEmoji = '🍽️'; // Default emoji
-    let imageCapture = false;
     let fileInput;
     let nameInput;
     let imageData = null; // Store the image data URL
     
     // Image resize configuration
-    const maxFileSizeKB = 50;
-    const targetWidth = 300;
-    const imageQuality = 0.7;
+    const IMAGE_CONFIG = {
+        maxFileSizeKB: 50,
+        targetWidth: 300,
+        initialQuality: 0.7,
+        minQuality: 0.1,
+        compressionStep: 0.1
+    };
     
+    // Reset modal form to initial state
+    function resetForm() {
+        foodName = '';
+        foodEmoji = '🍽️';
+        imageData = null;
+    }
+    
+    // Close the modal and reset the form
     function closeModal() {
         showModal = false;
         resetForm();
     }
     
-    function resetForm() {
-        foodName = '';
-        foodEmoji = '🍽️';
-        imageCapture = false;
-        imageData = null;
-    }
-    
+    // Handle adding a new food item
     function handleAddFood() {
-        if (foodName.trim()) {
-            // Generate a unique ID
-            const id = 'custom_' + Date.now();
-            
-            // Create new food item with image if available
-            const newFood = {
-                id,
-                name: foodName,
-                emoji: foodEmoji,
-                category: 'custom',
-                custom: true,
-                imageData: imageData // Include the image data if available
-            };
-            
-            // Call the parent's callback
-            onAddFood(newFood);
-            
-            // Close modal and reset form
-            closeModal();
-        }
-    }
-    
-    function activateCamera() {
-        // Ensure fileInput is initialized
-        fileInput = document.getElementById('food-image-input');
+        const trimmedName = foodName.trim();
+        if (!trimmedName) return;
         
-        if (fileInput) {
-            // On mobile devices this will open the camera
-            fileInput.setAttribute("capture", "environment");
-            fileInput.setAttribute("accept", "image/*");
-            fileInput.click();
-        } else {
-            console.error("File input not found");
-        }
+        // Create new food item with unique ID
+        const newFood = {
+            id: `custom_${Date.now()}`,
+            name: trimmedName,
+            emoji: foodEmoji,
+            category: 'custom',
+            custom: true,
+            imageData
+        };
+        
+        // Send to parent and close
+        onAddFood(newFood);
+        closeModal();
     }
     
+    // Open camera or file picker
+    function activateCamera() {
+        fileInput = document.getElementById('food-image-input');
+        if (!fileInput) {
+            console.error("File input not found");
+            return;
+        }
+        
+        fileInput.setAttribute("capture", "environment");
+        fileInput.setAttribute("accept", "image/*");
+        fileInput.click();
+    }
+    
+    // Handle image file selection
     function handleImageSelection(event) {
         const file = event.target.files[0];
-        if (file) {
-            // Resize and compress the image
-            resizeAndCompressImage(file);
-            
-            // Reset the file input for future selections
-            if (fileInput) {
-                fileInput.value = '';
-            }
-        }
+        if (!file) return;
+        
+        // Process the image
+        resizeAndCompressImage(file);
+        
+        // Reset input for future selections
+        if (fileInput) fileInput.value = '';
     }
     
-    // Function to resize and compress the image
+    // Process image for optimization
     function resizeAndCompressImage(file) {
-        // Create a FileReader to read the image file
         const reader = new FileReader();
         
         reader.onload = (e) => {
             const img = new Image();
             img.src = e.target.result;
             
-            img.onload = () => {
-                // Create canvas for resizing
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-                
-                // Calculate new dimensions while maintaining aspect ratio
-                if (width > targetWidth) {
-                    const scaleFactor = targetWidth / width;
-                    width = targetWidth;
-                    height = Math.round(height * scaleFactor);
-                }
-                
-                // Set canvas dimensions and draw resized image
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                // Start with high quality and gradually lower it until we hit target size
-                let quality = imageQuality;
-                let dataUrl;
-                let currentSize;
-                
-                // First attempt at compression
-                dataUrl = canvas.toDataURL('image/jpeg', quality);
-                currentSize = Math.round((dataUrl.length * 3) / 4) / 1024; // Convert base64 to KB
-                
-                // Keep reducing quality until we're under maxFileSizeKB
-                if (currentSize > maxFileSizeKB) {
-                    const compressionStep = 0.1;
-                    while (currentSize > maxFileSizeKB && quality > 0.1) {
-                        quality -= compressionStep;
-                        dataUrl = canvas.toDataURL('image/jpeg', quality);
-                        currentSize = Math.round((dataUrl.length * 3) / 4) / 1024;
-                    }
-                }
-                
-                console.log(`Resized image to ${width}x${height}, ${Math.round(currentSize)}KB with quality ${quality.toFixed(1)}`);
-                
-                // Store the compressed image data URL
-                imageData = dataUrl;
-                
-                // Update the emoji as a visual indicator in the modal
-                foodEmoji = '📸';
-            };
+            img.onload = () => processLoadedImage(img);
         };
         
-        // Read the image file as a data URL
         reader.readAsDataURL(file);
     }
     
-    // Use both onMount and afterUpdate to ensure fileInput is initialized
-    onMount(() => {
-        if (showModal) {
-            fileInput = document.getElementById('food-image-input');
-            focusNameInput();
-        }
-    });
+    // Process an already loaded image object
+    function processLoadedImage(img) {
+        // Create canvas and get dimensions
+        const canvas = document.createElement('canvas');
+        const { width, height } = calculateDimensions(img);
+        
+        // Set canvas size and draw the image
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Compress the image
+        compressImage(canvas);
+    }
     
-    afterUpdate(() => {
-        if (showModal) {
-            fileInput = document.getElementById('food-image-input');
-            focusNameInput();
+    // Calculate dimensions while maintaining aspect ratio
+    function calculateDimensions(img) {
+        let { width, height } = img;
+        
+        if (width <= IMAGE_CONFIG.targetWidth) {
+            return { width, height };
         }
-    });
+        
+        const scaleFactor = IMAGE_CONFIG.targetWidth / width;
+        return {
+            width: IMAGE_CONFIG.targetWidth,
+            height: Math.round(height * scaleFactor)
+        };
+    }
+    
+    // Compress the image to target file size
+    function compressImage(canvas) {
+        let quality = IMAGE_CONFIG.initialQuality;
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        let currentSize = estimateFileSizeKB(dataUrl);
+        
+        // Reduce quality until target size is reached
+        while (currentSize > IMAGE_CONFIG.maxFileSizeKB && quality > IMAGE_CONFIG.minQuality) {
+            quality -= IMAGE_CONFIG.compressionStep;
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+            currentSize = estimateFileSizeKB(dataUrl);
+        }
+        
+        // Log results and update state
+        console.log(
+            `Resized to ${canvas.width}x${canvas.height}, ` +
+            `${Math.round(currentSize)}KB with quality ${quality.toFixed(1)}`
+        );
+        
+        imageData = dataUrl;
+        foodEmoji = '📸';
+    }
+    
+    // Estimate file size in KB from data URL
+    function estimateFileSizeKB(dataUrl) {
+        return Math.round((dataUrl.length * 3) / 4) / 1024;
+    }
+    
+    // Initialize and focus on input when modal is shown
+    function initializeModal() {
+        if (!showModal) return;
+        
+        fileInput = document.getElementById('food-image-input');
+        focusNameInput();
+    }
     
     function focusNameInput() {
-        // Add a small delay to ensure the DOM is fully rendered
-        setTimeout(() => {
-            if (nameInput) {
-                nameInput.focus();
-            }
-        }, 50);
+        setTimeout(() => nameInput?.focus(), 50);
     }
+    
+    // Lifecycle hooks
+    onMount(initializeModal);
+    afterUpdate(initializeModal);
 </script>
 
 {#if showModal}
@@ -201,7 +206,11 @@
                 />
             </div>
             
-            <button class="add-food-btn" on:click={handleAddFood} disabled={!foodName.trim()}>
+            <button 
+                class="add-food-btn" 
+                on:click={handleAddFood} 
+                disabled={!foodName.trim()}
+            >
                 Add Food
             </button>
         </div>

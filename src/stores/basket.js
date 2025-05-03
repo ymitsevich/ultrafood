@@ -1,30 +1,59 @@
 import { writable } from 'svelte/store';
 
-// Create a writable store for the basket
+/**
+ * Basket Store
+ * Manages the food items in the user's basket
+ */
+
+// Create a writable store with empty array initial state
 const basketStore = writable([]);
 
-// Create derived functions to manipulate the basket
+/**
+ * Public basket API with methods to manipulate the basket
+ */
 export const basket = {
-    // Subscribe to basket changes
+    // Allow components to subscribe to basket changes
     subscribe: basketStore.subscribe,
     
-    // Add an item to the basket
+    /**
+     * Add a food item to the basket
+     * @param {Object} item - The food item to add
+     */
     add: (item) => {
+        if (!item) return;
+        
         basketStore.update(items => [
             ...items,
-            { ...item }
+            { ...item } // Create a copy to avoid mutations
         ]);
     },
     
-    // Remove an item from the basket
+    /**
+     * Remove an item from the basket by its index
+     * @param {Number} index - The index of the item to remove
+     */
     remove: (index) => {
+        if (index < 0) return;
+        
         basketStore.update(items => 
             items.filter((_, i) => i !== index)
         );
     },
     
-    // Clear the basket
-    clear: () => {
-        basketStore.set([]);
+    /**
+     * Clear all items from the basket
+     */
+    clear: () => basketStore.set([]),
+    
+    /**
+     * Get the current number of items in the basket
+     * @returns {Number} - The count of items in the basket
+     */
+    count: () => {
+        let count;
+        basketStore.subscribe(items => {
+            count = items.length;
+        })();
+        return count;
     }
 };
