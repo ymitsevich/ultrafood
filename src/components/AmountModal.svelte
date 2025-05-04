@@ -47,8 +47,9 @@
     <div class="modal" style="display: flex;">
         <div class="modal-content">
             <span class="close-modal" on:click={closeModal}>&times;</span>
-            <h2>Set Amount: {selectedFood.emoji} {selectedFood.name}</h2>
             <div class="amount-options">
+                <button class="amount-btn" on:click={() => saveAndClose('20g')}>20g</button>
+                <button class="amount-btn" on:click={() => saveAndClose('30g')}>30g</button>
                 <button class="amount-btn" on:click={() => saveAndClose('50g')}>50g</button>
                 <button class="amount-btn" on:click={() => saveAndClose('100g')}>100g</button>
                 <button class="amount-btn" on:click={() => saveAndClose('150g')}>150g</button>
@@ -85,18 +86,18 @@
     .modal-content {
         background-color: white;
         width: 90%;
-        max-width: 600px; /* Increased from 400px */
-        border-radius: 20px; /* Increased from 15px */
-        padding: 35px; /* Increased from 25px */
+        max-width: 480px; /* Reduced from 600px */
+        border-radius: 16px; /* Reduced from 20px */
+        padding: 25px; /* Reduced from 35px */
         position: relative;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.3); /* Enhanced shadow */
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     }
     
     .close-modal {
         position: absolute;
-        top: 20px;
-        right: 20px;
-        font-size: 32px; /* Increased from 24px */
+        top: 15px;
+        right: 15px;
+        font-size: 28px; /* Reduced from 32px */
         cursor: pointer;
         color: #666;
     }
@@ -105,50 +106,45 @@
         color: #333;
     }
     
-    h2 {
-        margin-bottom: 30px; /* Increased from 20px */
-        font-size: 28px; /* Increased from 20px */
-        padding-right: 25px;
-    }
-    
     .amount-options {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 20px; /* Increased from 10px */
-        margin-bottom: 30px; /* Increased from 20px */
+        gap: 15px; /* Reduced from 20px */
+        margin-bottom: 20px; /* Reduced from 30px */
+        padding-top: 10px; /* Added padding since title is removed */
     }
     
     .amount-btn {
-        padding: 25px; /* Increased from 15px */
-        border: 2px solid #ddd; /* Increased border */
-        border-radius: 12px; /* Increased from 8px */
+        padding: 18px; /* Reduced from 25px */
+        border: 2px solid #ddd;
+        border-radius: 10px; /* Reduced from 12px */
         background-color: #f9f9f9;
-        font-size: 24px; /* Increased from 16px */
+        font-size: 20px; /* Reduced from 24px */
         font-weight: bold;
         cursor: pointer;
         transition: all 0.2s;
-        min-height: 100px; /* Added fixed height */
+        min-height: 80px; /* Reduced from 100px */
     }
     
     .amount-btn:hover {
         background-color: #C26C51FF;
         color: white;
         border-color: #C26C51FF;
-        transform: translateY(-4px); /* Added transform effect */
-        box-shadow: 0 6px 12px rgba(0,0,0,0.1); /* Added shadow */
+        transform: translateY(-4px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
     }
     
     .custom-amount {
         display: flex;
         justify-content: center;
-        margin: 20px auto;
-        width: 80%; /* Keep width at 80% */
+        margin: 15px auto; /* Reduced from 20px */
+        width: 90%; /* Increased from 80% for better proportions */
     }
     
     /* Override any styles from main.css */
     :global(.custom-amount) {
-        margin: 20px auto !important;
-        width: 80% !important;
+        margin: 15px auto !important;
+        width: 90% !important;
     }
     
     .custom-amount input {

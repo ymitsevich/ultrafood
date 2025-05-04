@@ -44,7 +44,10 @@
     
     // Get default amount for a food item
     function getFoodDefaultAmount(foodId) {
-        return $foodDefaults[foodId]?.amount || '100g';
+        const food = foodItems.find(item => item.id === foodId);
+        // First try to get the defaultAmount stored in the food item from Firebase
+        // If not found, fall back to the local store with 50g default
+        return food?.defaultAmount || $foodDefaults[foodId]?.amount || '50g';
     }
     
     // Handle edit button click with event stopping
