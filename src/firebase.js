@@ -12,7 +12,8 @@ import {
   where,
   setDoc,
   orderBy,
-  limit
+  limit,
+  startAfter
 } from 'firebase/firestore';
 import { getAnalytics } from "firebase/analytics";
 
@@ -340,6 +341,102 @@ export async function getSubmittedMeals(maxItems = 100) {
     console.warn("Error getting submitted meals from Firestore:", error.message);
     // Return empty array instead of throwing to prevent app crashes
     return [];
+  }
+}
+
+/**
+ * Get submitted meals with pagination
+ * @param {Number} pageSize - Number of meals per page
+ * @param {Object|null} lastVisible - The last document from the previous page, null for the first page
+ * @returns {Promise<Object>} - Promise that resolves with meals array and the last visible document for pagination
+ */
+export async function getSubmittedMealsPaginated(pageSize = 10, lastVisible = null) {
+  // In local-only mode, return slices of local memory items
+  if (LOCAL_ONLY_MODE) {
+    // Get starting index based on the last visible document
+    let startIndex = 0;
+    if (lastVisible && lastVisible.index !== undefined) {
+      startIndex = lastVisible.index + 1;
+    }
+    
+    // Get a slice of local meals
+    const endIndex = Math.min(startIndex + pageSize, localSubmittedMeals.length);
+    const meals = localSubmittedMeals.slice(startIndex, endIndex);
+    
+    // Calculate if there are more pages
+    const hasNextPage = endIndex < localSubmittedMeals.length;
+    
+    // Create a lastVisible object for the next page
+    const newLastVisible = meals.length > 0 ? { 
+      index: startIndex + meals.length - 1 
+    } : null;
+    
+    return {
+      meals,
+      lastVisible: newLastVisible,
+      hasNextPage
+    };
+  }
+
+  if (!db || !isFirebaseInitialized) {
+    console.warn("Firestore not initialized yet, returning empty array");
+    return { meals: [], lastVisible: null, hasNextPage: false };
+  }
+
+  // Create a timeout promise that rejects after specified time
+  const timeout = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Firestore operation timed out')), 5000);
+  });
+  
+  try {
+    // Build query with pagination
+    let mealsQuery;
+    
+    if (lastVisible) {
+      // Continue from the last document (next page)
+      mealsQuery = query(
+        collection(db, "submitted-meals"),
+        orderBy("submittedAt", "desc"),
+        limit(pageSize),
+        startAfter(lastVisible)
+      );
+    } else {
+      // First page
+      mealsQuery = query(
+        collection(db, "submitted-meals"),
+        orderBy("submittedAt", "desc"),
+        limit(pageSize)
+      );
+    }
+    
+    // Race between the actual query and the timeout
+    const queryPromise = getDocs(mealsQuery);
+    const querySnapshot = await Promise.race([queryPromise, timeout]);
+    
+    // Convert documents to objects
+    const meals = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    // Get the last visible document for next pagination call
+    const newLastVisible = querySnapshot.docs.length > 0 ? 
+      querySnapshot.docs[querySnapshot.docs.length - 1] : null;
+    
+    // Check if there might be more pages
+    // We'll need a separate count query to know for sure, but this is a reasonable approximation
+    const hasNextPage = querySnapshot.docs.length >= pageSize;
+    
+    console.log(`Retrieved ${meals.length} submitted meals (paginated) from Firestore`);
+    return {
+      meals,
+      lastVisible: newLastVisible,
+      hasNextPage
+    };
+  } catch (error) {
+    console.warn("Error getting paginated meals from Firestore:", error.message);
+    // Return empty results instead of throwing to prevent app crashes
+    return { meals: [], lastVisible: null, hasNextPage: false };
   }
 }
 

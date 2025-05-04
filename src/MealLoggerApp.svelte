@@ -4,7 +4,13 @@
     import { foodDefaults } from './stores/foodDefaults.js';
     import { basket } from './stores/basket.js';
     import { onMount } from 'svelte';
-    import { getFoodItems, getSubmittedMeals, isFirebaseAvailable, LOCAL_ONLY_MODE } from './firebase.js';
+    import { 
+        getFoodItems, 
+        getSubmittedMeals, 
+        getSubmittedMealsPaginated, 
+        isFirebaseAvailable, 
+        LOCAL_ONLY_MODE 
+    } from './firebase.js';
     
     // Import our components
     import BasketSidebar from './BasketSidebar.svelte';
@@ -24,9 +30,13 @@
     let submittedMeals = [];
     let isLoadingMeals = false;
     let mealLoadError = null;
-    let currentMealPage = 0;
-    const MEALS_PER_PAGE = 3;
+    const MEALS_PER_PAGE = 5; // Increased from 3 for better UX
     let showSubmittedMealsModal = false;
+    
+    // Pagination state for server-side pagination
+    let lastVisibleMeal = null;
+    let hasNextPage = false;
+    let currentPage = 1;
     
     // Load food items and submitted meals from Firebase on component mount
     onMount(async () => {
@@ -94,16 +104,34 @@
         }
     });
     
-    // Load submitted meals from Firebase
-    async function loadSubmittedMeals() {
+    // Load submitted meals from Firebase with pagination
+    async function loadSubmittedMeals(resetPagination = true) {
         try {
             isLoadingMeals = true;
             mealLoadError = null;
             
-            const meals = await getSubmittedMeals(100);
-            submittedMeals = meals;
+            if (resetPagination) {
+                // Reset pagination state when loading first page
+                lastVisibleMeal = null;
+                submittedMeals = [];
+                currentPage = 1;
+            }
             
-            console.log(`Loaded ${meals.length} submitted meals`);
+            const result = await getSubmittedMealsPaginated(MEALS_PER_PAGE, lastVisibleMeal);
+            
+            if (resetPagination) {
+                // Replace the meals array with the first page
+                submittedMeals = result.meals;
+            } else {
+                // Append new meals to the existing array
+                submittedMeals = [...submittedMeals, ...result.meals];
+            }
+            
+            // Update pagination state
+            lastVisibleMeal = result.lastVisible;
+            hasNextPage = result.hasNextPage;
+            
+            console.log(`Loaded page ${currentPage} of meals: ${result.meals.length} items`);
         } catch (error) {
             console.error('Error loading submitted meals:', error);
             mealLoadError = 'Failed to load submitted meals.';
@@ -112,10 +140,18 @@
         }
     }
     
+    // Load next page of meals
+    async function loadMoreMeals() {
+        if (!hasNextPage || isLoadingMeals) return;
+        
+        currentPage++;
+        await loadSubmittedMeals(false); // false means don't reset pagination
+    }
+    
     // Handle meal submission - refresh data
     function handleMealSubmitted() {
         console.log("Meal submitted, refreshing meal data...");
-        loadSubmittedMeals();
+        loadSubmittedMeals(true); // Reset pagination to show the newest meal
     }
     
     // Modal states
@@ -139,30 +175,16 @@
     
     function openSubmittedMealsModal() {
         showSubmittedMealsModal = true;
+        
+        // If we haven't loaded any meals yet, load the first page
+        if (submittedMeals.length === 0) {
+            loadSubmittedMeals(true);
+        }
     }
     
     function closeSubmittedMealsModal() {
         showSubmittedMealsModal = false;
     }
-    
-    function nextMealPage() {
-        if ((currentMealPage + 1) * MEALS_PER_PAGE < submittedMeals.length) {
-            currentMealPage++;
-        }
-    }
-    
-    function prevMealPage() {
-        if (currentMealPage > 0) {
-            currentMealPage--;
-        }
-    }
-    
-    $: paginatedMeals = submittedMeals.slice(
-        currentMealPage * MEALS_PER_PAGE, 
-        (currentMealPage + 1) * MEALS_PER_PAGE
-    );
-    
-    $: totalMealPages = Math.ceil(submittedMeals.length / MEALS_PER_PAGE) || 1;
     
     // Format date for display
     function formatDate(isoString) {
@@ -270,11 +292,11 @@
                 <span class="close-modal" on:click={closeSubmittedMealsModal}>&times;</span>
                 <h2>Your Logged Meals</h2>
                 
-                {#if isLoadingMeals}
+                {#if isLoadingMeals && submittedMeals.length === 0}
                     <div class="loading-meals">
                         <p>Loading your logged meals...</p>
                     </div>
-                {:else if mealLoadError}
+                {:else if mealLoadError && submittedMeals.length === 0}
                     <div class="error-message">
                         <p>{mealLoadError}</p>
                     </div>
@@ -284,7 +306,7 @@
                     </div>
                 {:else}
                     <div class="submitted-meals-list">
-                        {#each paginatedMeals as meal (meal.id)}
+                        {#each submittedMeals as meal (meal.id)}
                             <div class="meal-card">
                                 <div class="meal-header">
                                     <div class="meal-timestamp">{formatDate(meal.timestamp)}</div>
@@ -310,16 +332,29 @@
                                 </div>
                             </div>
                         {/each}
+                        
+                        {#if isLoadingMeals && submittedMeals.length > 0}
+                            <div class="loading-more">
+                                <div class="loading-spinner"></div>
+                                <p>Loading more meals...</p>
+                            </div>
+                        {/if}
                     </div>
                     
                     <div class="pagination-controls">
-                        <button class="pagination-button" on:click={prevMealPage} disabled={currentMealPage === 0}>
-                            &laquo; Previous
-                        </button>
-                        <span class="page-info">Page {currentMealPage + 1} of {totalMealPages}</span>
-                        <button class="pagination-button" on:click={nextMealPage} disabled={(currentMealPage + 1) * MEALS_PER_PAGE >= submittedMeals.length}>
-                            Next &raquo;
-                        </button>
+                        {#if hasNextPage}
+                            <button class="pagination-button load-more-button" on:click={loadMoreMeals} disabled={isLoadingMeals}>
+                                {#if isLoadingMeals}
+                                    Loading...
+                                {:else}
+                                    Load More Meals
+                                {/if}
+                            </button>
+                        {:else}
+                            <div class="end-of-results">
+                                {submittedMeals.length > 0 ? 'No more meals to load' : ''}
+                            </div>
+                        {/if}
                     </div>
                 {/if}
             </div>
@@ -626,39 +661,62 @@
         color: #e74c3c;
     }
     
-    /* Pagination Controls */
+    /* Pagination Controls - updated for "Load More" pattern */
     .pagination-controls {
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: 15px;
         margin-top: 20px;
         padding-top: 15px;
         border-top: 1px solid #eee;
     }
     
-    .pagination-button {
-        padding: 8px 15px;
+    .load-more-button {
+        padding: 12px 20px;
         background-color: #f0f0f0;
         border: 1px solid #ddd;
         border-radius: 20px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 16px;
         transition: all 0.2s;
+        min-width: 180px;
     }
     
-    .pagination-button:hover:not([disabled]) {
+    .load-more-button:hover:not([disabled]) {
         background-color: #C26C51FF;
         color: white;
     }
     
-    .pagination-button[disabled] {
+    .load-more-button[disabled] {
         opacity: 0.5;
         cursor: not-allowed;
     }
     
-    .page-info {
+    .end-of-results {
         font-size: 14px;
+        color: #999;
+        padding: 10px;
+    }
+    
+    .loading-more {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 15px;
         color: #666;
+        gap: 10px;
+    }
+    
+    .loading-spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        border-top-color: #C26C51FF;
+        animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 </style>
