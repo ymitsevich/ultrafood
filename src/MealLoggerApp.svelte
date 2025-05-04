@@ -25,6 +25,10 @@
     let isLoading = true;
     let loadError = null;
     let usingLocalData = false;
+
+    // New category modal state
+    let showAddCategoryModal = false;
+    let newCategoryName = '';
     
     // Store for submitted meals
     let submittedMeals = [];
@@ -208,6 +212,30 @@
         // Create a new reference for the entire foodData object to trigger reactivity
         foodData = { ...foodData };
     }
+
+    // Add new category function
+    function addNewCategory() {
+        if (newCategoryName.trim()) {
+            // Convert to lowercase and replace spaces with underscores for consistency
+            const categoryKey = newCategoryName.trim().toLowerCase().replace(/\s+/g, '_');
+            
+            // Check if category already exists
+            if (!foodData[categoryKey]) {
+                // Create the new category with an empty array
+                foodData[categoryKey] = [];
+                
+                // Trigger reactivity by creating a new reference
+                foodData = { ...foodData };
+                
+                // Switch to the new category
+                currentCategory = categoryKey;
+            }
+            
+            // Reset and close modal
+            newCategoryName = '';
+            showAddCategoryModal = false;
+        }
+    }
 </script>
 
 <div class="meal-logger">
@@ -236,6 +264,14 @@
                     {category.charAt(0).toUpperCase() + category.slice(1)}
                 </button>
             {/each}
+            <!-- Add Category Button -->
+            <button
+                class="category-btn add-category-btn"
+                on:click={() => showAddCategoryModal = true}
+                title="Add New Category"
+            >
+                +
+            </button>
         </div>
 
         <!-- Local mode banner -->
@@ -360,6 +396,36 @@
             </div>
         </div>
     {/if}
+
+    <!-- Add Category Modal -->
+    {#if showAddCategoryModal}
+        <div class="modal" on:click|self={() => showAddCategoryModal = false}>
+            <div class="modal-content add-category-modal" on:click|stopPropagation>
+                <span class="close-modal" on:click={() => showAddCategoryModal = false}>&times;</span>
+                <h2>Add New Category</h2>
+                
+                <div class="form-group">
+                    <label for="category-name">Category Name:</label>
+                    <input 
+                        type="text" 
+                        id="category-name" 
+                        placeholder="Enter category name..." 
+                        bind:value={newCategoryName}
+                        on:keypress={(e) => e.key === 'Enter' && addNewCategory()}
+                        autofocus
+                    />
+                </div>
+                
+                <button 
+                    class="add-category-submit-btn" 
+                    on:click={addNewCategory} 
+                    disabled={!newCategoryName.trim()}
+                >
+                    Add Category
+                </button>
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -426,6 +492,68 @@
     
     .category-btn:hover:not(.active) {
         background-color: #e0e0e0;
+    }
+    
+    /* Add category button specific styles */
+    .add-category-btn {
+        font-size: 18px;
+        font-weight: bold;
+        padding: 2px 10px;
+        width: calc(2em + 20px); /* Make button 2x wider than default */
+        background-color: #f8f8f8;
+        border: 1px dashed #ccc;
+    }
+    
+    .add-category-btn:hover {
+        background-color: #e6e6e6;
+        border-color: #C26C51FF;
+    }
+    
+    /* Add category modal specific styles */
+    .add-category-modal {
+        max-width: 400px;
+        padding: 25px;
+    }
+    
+    .add-category-submit-btn {
+        background-color: #C26C51FF;
+        color: white;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        display: block;
+        width: 100%;
+        margin-top: 20px;
+    }
+    
+    .add-category-submit-btn:hover:not([disabled]) {
+        background-color: #b05a42;
+    }
+    
+    .add-category-submit-btn[disabled] {
+        background-color: #e0bfb5;
+        cursor: not-allowed;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+    
+    .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
     }
     
     .loading-state {
