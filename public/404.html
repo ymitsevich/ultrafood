@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting...</title>
+  <script>
+    // Redirect all 404 errors to the index page while preserving the URL
+    // This allows client-side routing to work with GitHub Pages
+    const segmentCount = 1; // Adjust based on your repository name (ultrafood = 1 segment)
+    const redirectUrl = window.location.pathname.split('/').slice(0, segmentCount + 1).join('/') + '/';
+    
+    sessionStorage.setItem('redirect', window.location.pathname.replace(redirectUrl, '/'));
+    window.location.href = redirectUrl;
+  </script>
+</head>
+<body>
+  <p>Redirecting to the main page...</p>
+</body>
+</html>

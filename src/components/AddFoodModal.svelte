@@ -1,21 +1,26 @@
 <script>
     import { onMount, afterUpdate } from 'svelte';
+    import { uploadFoodImage } from '../cloudinary.js';
+    import { saveFoodItem } from '../firebase.js'; // For database operations
     
     // Exported props
     export let showModal = false;
     export let onAddFood;
+    export let currentCategory = 'fruit'; // Default to fruit instead of custom
     
     // Local state
     let foodName = '';
     let foodEmoji = '🍽️'; // Default emoji
     let fileInput;
     let nameInput;
-    let imageData = null; // Store the image data URL
+    let imageData = null; // Store the image data URL for preview
+    let imageBlob = null; // Store the image blob for upload
+    let isUploading = false;
+    let uploadError = null;
     
     // Image resize configuration
     const IMAGE_CONFIG = {
         maxFileSizeKB: 50,
-        targetWidth: 300,
         initialQuality: 0.7,
         minQuality: 0.1,
         compressionStep: 0.1
@@ -26,6 +31,9 @@
         foodName = '';
         foodEmoji = '🍽️';
         imageData = null;
+        imageBlob = null;
+        isUploading = false;
+        uploadError = null;
     }
     
     // Close the modal and reset the form
@@ -35,23 +43,64 @@
     }
     
     // Handle adding a new food item
-    function handleAddFood() {
+    async function handleAddFood() {
         const trimmedName = foodName.trim();
         if (!trimmedName) return;
         
-        // Create new food item with unique ID
+        const foodId = `food_${Date.now()}`;
+        
+        // Create base food item object
         const newFood = {
-            id: `custom_${Date.now()}`,
+            id: foodId,
             name: trimmedName,
             emoji: foodEmoji,
-            category: 'custom',
-            custom: true,
-            imageData
+            category: currentCategory, // Use current category
+            createdAt: new Date().toISOString()
         };
         
-        // Send to parent and close
-        onAddFood(newFood);
-        closeModal();
+        try {
+            isUploading = true;
+            uploadError = null;
+            
+            // If there's an image, upload it to Cloudinary
+            if (imageBlob) {
+                try {
+                    // Upload to Cloudinary and get URL
+                    const imageUrl = await uploadFoodImage(imageBlob, foodId);
+                    newFood.imageUrl = imageUrl; // Store Cloudinary URL
+                    
+                    console.log('Image uploaded to Cloudinary:', imageUrl);
+                } catch (error) {
+                    console.error('Failed to upload image to Cloudinary:', error);
+                    uploadError = 'Failed to upload image. Using local image as fallback.';
+                    
+                    // Fallback to data URL if Cloudinary upload fails
+                    newFood.imageData = imageData;
+                }
+            }
+            
+            // Save the food item data to Firebase Firestore
+            try {
+                const firestoreId = await saveFoodItem(newFood);
+                console.log('Food item saved to Firestore with ID:', firestoreId);
+                
+                // Update the newFood object with the Firestore document ID
+                newFood.firestoreId = firestoreId;
+            } catch (error) {
+                console.error('Failed to save food item to Firebase:', error);
+                uploadError = uploadError || 'Failed to save food data to database.';
+            }
+            
+            // Send to parent and close
+            onAddFood(newFood);
+            closeModal();
+            
+        } catch (error) {
+            console.error('Error in handleAddFood:', error);
+            uploadError = 'An unexpected error occurred.';
+        } finally {
+            isUploading = false;
+        }
     }
     
     // Open camera or file picker
@@ -97,31 +146,34 @@
     function processLoadedImage(img) {
         // Create canvas and get dimensions
         const canvas = document.createElement('canvas');
-        const { width, height } = calculateDimensions(img);
+        const targetSize = 120; // Square size for food buttons
         
-        // Set canvas size and draw the image
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = targetSize;
+        canvas.height = targetSize;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Calculate cropping to maintain aspect ratio
+        let sourceX = 0, sourceY = 0, sourceWidth = img.width, sourceHeight = img.height;
+        
+        if (img.width > img.height) {
+            // Landscape image: crop the sides
+            sourceX = (img.width - img.height) / 2;
+            sourceWidth = img.height;
+        } else if (img.height > img.width) {
+            // Portrait image: crop the top/bottom
+            sourceY = (img.height - img.width) / 2;
+            sourceHeight = img.width;
+        }
+        
+        // Draw the cropped, square image
+        ctx.drawImage(
+            img, 
+            sourceX, sourceY, sourceWidth, sourceHeight, // Source rectangle
+            0, 0, targetSize, targetSize // Destination rectangle
+        );
         
         // Compress the image
         compressImage(canvas);
-    }
-    
-    // Calculate dimensions while maintaining aspect ratio
-    function calculateDimensions(img) {
-        let { width, height } = img;
-        
-        if (width <= IMAGE_CONFIG.targetWidth) {
-            return { width, height };
-        }
-        
-        const scaleFactor = IMAGE_CONFIG.targetWidth / width;
-        return {
-            width: IMAGE_CONFIG.targetWidth,
-            height: Math.round(height * scaleFactor)
-        };
     }
     
     // Compress the image to target file size
@@ -143,7 +195,16 @@
             `${Math.round(currentSize)}KB with quality ${quality.toFixed(1)}`
         );
         
+        // Store data URL for preview
         imageData = dataUrl;
+        
+        // Convert data URL to Blob for Cloudinary upload
+        canvas.toBlob(
+            (blob) => { imageBlob = blob; },
+            'image/jpeg',
+            quality
+        );
+        
         foodEmoji = '📸';
     }
     
@@ -195,6 +256,13 @@
             </div>
             
             <div class="form-group">
+                <label for="food-category">Category:</label>
+                <div class="category-display">
+                    {currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1)}
+                </div>
+            </div>
+            
+            <div class="form-group">
                 <button type="button" class="image-btn" on:click={activateCamera}>
                     📷 Take Photo
                 </button>
@@ -209,10 +277,18 @@
             <button 
                 class="add-food-btn" 
                 on:click={handleAddFood} 
-                disabled={!foodName.trim()}
+                disabled={!foodName.trim() || isUploading}
             >
-                Add Food
+                {#if isUploading}
+                    Uploading...
+                {:else}
+                    Add Food
+                {/if}
             </button>
+            
+            {#if uploadError}
+                <p class="error-message">{uploadError}</p>
+            {/if}
         </div>
     </div>
 {/if}
@@ -335,5 +411,20 @@
     .add-food-btn:disabled {
         background-color: #a9b0d8;
         cursor: not-allowed;
+    }
+    
+    .error-message {
+        color: #e74c3c;
+        font-size: 14px;
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    .category-display {
+        padding: 12px 15px;
+        background-color: #f0f0f0;
+        border-radius: 12px;
+        font-size: 16px;
+        color: #555;
     }
 </style>

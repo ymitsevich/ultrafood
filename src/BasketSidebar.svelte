@@ -1,22 +1,47 @@
 <script>
     import { basket } from './stores/basket.js';
+    import { saveSubmittedMeal } from './firebase.js';
     
     // Exported props
     export let onSubmitBasket;
+    export let onMealSubmitted = () => {}; // Callback for when a meal is submitted successfully
     
     // Constants
     const SUBMIT_NOW_MESSAGE = 'Logged {count} items to your meal (Now)!';
     
     // Submit basket with "Now" time option
-    function submitNow() {
+    async function submitNow() {
         if ($basket.length === 0) return;
         
-        // Log action and show confirmation
-        console.log("Submitting basket with time: Now");
-        showConfirmation($basket.length);
-        
-        // Clear the basket after submission
-        basket.clear();
+        try {
+            // Make a deep copy of the basket items
+            const basketItems = JSON.parse(JSON.stringify($basket));
+            
+            // Generate current timestamp
+            const timestamp = new Date().toISOString();
+            
+            // Log action
+            console.log("Submitting basket with time: Now");
+            
+            // Save meal to Firebase
+            const mealId = await saveSubmittedMeal(basketItems, timestamp);
+            
+            if (mealId) {
+                // Show confirmation
+                showConfirmation($basket.length);
+                
+                // Clear the basket after submission
+                basket.clear();
+                
+                // Call the callback to refresh submitted meals
+                onMealSubmitted();
+            } else {
+                alert('Failed to log meal. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error submitting meal:', error);
+            alert('An unexpected error occurred.');
+        }
     }
     
     // Display confirmation message
@@ -39,7 +64,13 @@
             {#each $basket as item, index (index)}
                 <div class="basket-item">
                     <div class="basket-item-visual">
-                        {#if item.imageData}
+                        {#if item.imageUrl}
+                            <img 
+                                src={item.imageUrl} 
+                                alt={item.name} 
+                                class="basket-item-image"
+                            />
+                        {:else if item.imageData}
                             <img 
                                 src={item.imageData} 
                                 alt={item.name} 

@@ -2,10 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>Svelte App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UltraFood - Food Tracking App</title>
+    <script>
+      // Handle redirects from 404.html for GitHub Pages
+      (function() {
+        const redirect = sessionStorage.getItem('redirect');
+        if (redirect) {
+          sessionStorage.removeItem('redirect');
+          const newUrl = window.location.pathname.replace(/\/$/, '') + redirect;
+          history.replaceState(null, null, newUrl);
+        }
+      })();
+    </script>
 </head>
 <body>
-<div id="app"></div>
-<script type="module" src="/src/main.js"></script>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>

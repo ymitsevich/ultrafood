@@ -38,66 +38,58 @@ export const foodDefaults = {
     'squid': {amount: '100g', lastUsed: '1 week ago'}
 };
 
+// Function to get initial food data
 export function getFoodData() {
     return {
-        favorites: [
-            {id: 'chicken', name: 'Chicken', emoji: '🍗'},
-            {id: 'salad', name: 'Salad', emoji: '🥗'},
-            {id: 'pizza', name: 'Pizza', emoji: '🍕'},
-            {id: 'banana', name: 'Banana', emoji: '🍌'},
-            {id: 'apple', name: 'Apple', emoji: '🍎'},
-            {id: 'rice', name: 'Rice', emoji: '🍚'},
-            {id: 'fried_shrimp', name: 'Fried Shrimp', emoji: '🍤'}
-        ],
-        protein: [
-            {id: 'steak', name: 'Steak', emoji: '🥩'},
-            {id: 'chicken', name: 'Chicken', emoji: '🍗'},
-            {id: 'fish', name: 'Fish', emoji: '🐟'},
-            {id: 'egg', name: 'Eggs', emoji: '🥚'},
-            {id: 'tofu', name: 'Tofu', emoji: '🧃'},
-            {id: 'beans', name: 'Beans', emoji: '🫘'}
-        ],
-        fruits: [
-            {id: 'apple', name: 'Apple', emoji: '🍎'},
-            {id: 'banana', name: 'Banana', emoji: '🍌'},
-            {id: 'orange', name: 'Orange', emoji: '🍊'},
-            {id: 'grapes', name: 'Grapes', emoji: '🍇'},
-            {id: 'strawberry', name: 'Strawberry', emoji: '🍓'},
-            {id: 'watermelon', name: 'Watermelon', emoji: '🍉'}
+        fruit: [
+            { id: 'apple', name: 'Apple', emoji: '🍎' },
+            { id: 'banana', name: 'Banana', emoji: '🍌' },
+            { id: 'orange', name: 'Orange', emoji: '🍊' },
+            { id: 'grapes', name: 'Grapes', emoji: '🍇' },
+            { id: 'watermelon', name: 'Watermelon', emoji: '🍉' },
+            { id: 'strawberry', name: 'Strawberry', emoji: '🍓' },
+            { id: 'blueberry', name: 'Blueberry', emoji: '🫐' },
         ],
         vegetables: [
-            {id: 'salad', name: 'Salad', emoji: '🥗'},
-            {id: 'broccoli', name: 'Broccoli', emoji: '🥦'},
-            {id: 'carrot', name: 'Carrot', emoji: '🥕'},
-            {id: 'tomato', name: 'Tomato', emoji: '🍅'},
-            {id: 'potato', name: 'Potato', emoji: '🥔'},
-            {id: 'corn', name: 'Corn', emoji: '🌽'}
+            { id: 'tomato', name: 'Tomato', emoji: '🍅' },
+            { id: 'carrot', name: 'Carrot', emoji: '🥕' },
+            { id: 'broccoli', name: 'Broccoli', emoji: '🥦' },
+            { id: 'cucumber', name: 'Cucumber', emoji: '🥒' },
+            { id: 'corn', name: 'Corn', emoji: '🌽' },
+            { id: 'potato', name: 'Potato', emoji: '🥔' },
+        ],
+        proteins: [
+            { id: 'chicken', name: 'Chicken', emoji: '🍗' },
+            { id: 'beef', name: 'Beef', emoji: '🥩' },
+            { id: 'fish', name: 'Fish', emoji: '🐟' },
+            { id: 'egg', name: 'Egg', emoji: '🥚' },
+            { id: 'tofu', name: 'Tofu', emoji: '🧊' },
+            { id: 'beans', name: 'Beans', emoji: '🫘' },
         ],
         grains: [
-            {id: 'rice', name: 'Rice', emoji: '🍚'},
-            {id: 'bread', name: 'Bread', emoji: '🍞'},
-            {id: 'noodles', name: 'Noodles', emoji: '🍜'},
-            {id: 'sandwich', name: 'Sandwich', emoji: '🥪'},
-            {id: 'burrito', name: 'Burrito', emoji: '🌯'},
-            {id: 'pasta', name: 'Pasta', emoji: '🍝'}
+            { id: 'rice', name: 'Rice', emoji: '🍚' },
+            { id: 'bread', name: 'Bread', emoji: '🍞' },
+            { id: 'pasta', name: 'Pasta', emoji: '🍝' },
+            { id: 'oats', name: 'Oats', emoji: '🥣' },
+        ],
+        dairy: [
+            { id: 'milk', name: 'Milk', emoji: '🥛' },
+            { id: 'cheese', name: 'Cheese', emoji: '🧀' },
+            { id: 'yogurt', name: 'Yogurt', emoji: '🥣' },
         ],
         snacks: [
-            {id: 'pizza', name: 'Pizza', emoji: '🍕'},
-            {id: 'burger', name: 'Burger', emoji: '🍔'},
-            {id: 'fries', name: 'Fries', emoji: '🍟'},
-            {id: 'donut', name: 'Donut', emoji: '🍩'},
-            {id: 'cake', name: 'Cake', emoji: '🍰'},
-            {id: 'icecream', name: 'Ice Cream', emoji: '🍦'}
+            { id: 'chips', name: 'Chips', emoji: '🍟' },
+            { id: 'cookie', name: 'Cookie', emoji: '🍪' },
+            { id: 'chocolate', name: 'Chocolate', emoji: '🍫' },
+            { id: 'icecream', name: 'Ice Cream', emoji: '🍦' },
         ],
-        seafood: [
-            {id: 'fish', name: 'Fish', emoji: '🐟'},
-            {id: 'fried_shrimp', name: 'Fried Shrimp', emoji: '🍤'},
-            {id: 'shrimp', name: 'Shrimp', emoji: '🦐'},
-            {id: 'salmon', name: 'Salmon', emoji: '🐠'},
-            {id: 'crab', name: 'Crab', emoji: '🦀'},
-            {id: 'lobster', name: 'Lobster', emoji: '🦞'},
-            {id: 'oyster', name: 'Oyster', emoji: '🦪'},
-            {id: 'squid', name: 'Squid', emoji: '🦑'}
-        ]
+        drinks: [
+            { id: 'water', name: 'Water', emoji: '💧' },
+            { id: 'coffee', name: 'Coffee', emoji: '☕' },
+            { id: 'tea', name: 'Tea', emoji: '🍵' },
+            { id: 'soda', name: 'Soda', emoji: '🥤' },
+            { id: 'juice', name: 'Juice', emoji: '🧃' },
+        ],
+        // The custom category has been removed
     };
 }

@@ -22,10 +22,13 @@
             // Save as default
             foodDefaults.setDefault(selectedFood.id, amount);
             
-            // Add to basket with selected amount
+            // Add to basket with selected amount and include image properties
             basket.add({ 
                 ...selectedFood, 
-                amount: amount 
+                amount: amount,
+                // Explicitly ensure image properties are included
+                imageData: selectedFood.imageData || null,
+                imageUrl: selectedFood.imageUrl || null
             });
             
             // Close the modal

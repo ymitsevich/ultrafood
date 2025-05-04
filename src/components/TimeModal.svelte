@@ -1,78 +1,149 @@
 <script>
     import { basket } from '../stores/basket.js';
+    import { saveSubmittedMeal } from '../firebase.js';
     
+    // Exported props
     export let showModal = false;
-    
-    let mealTime = '';
-    
+    export let onMealSubmitted = () => {}; // Callback when meal is submitted successfully
+
+    // Local state
+    let selectedTime = 'now';
+    let customDate = '';
+    let customTime = '';
+    let submissionInProgress = false;
+    let submissionError = null;
+
+    // Get today's date as YYYY-MM-DD for default date input
+    $: today = new Date().toISOString().split('T')[0];
+
     function closeModal() {
         showModal = false;
     }
-    
-    function selectTime(time) {
-        mealTime = time;
-        
-        // If the time is Custom, capture the value from the input field
-        if (time === 'Custom') {
-            const customTimeInput = document.getElementById('customTimeInput');
-            if (customTimeInput && customTimeInput.value) {
-                time = `at ${customTimeInput.value}`;
-            } else {
-                time = 'Custom time (not specified)';
+
+    // Handle meal submission
+    async function handleSubmit() {
+        if ($basket.length === 0) return;
+
+        let timestamp;
+        submissionInProgress = true;
+        submissionError = null;
+
+        try {
+            // Format the timestamp based on selection
+            if (selectedTime === 'now') {
+                timestamp = new Date().toISOString();
+            } else if (selectedTime === 'custom') {
+                if (!customDate) {
+                    submissionError = "Please select a date";
+                    submissionInProgress = false;
+                    return;
+                }
+                
+                const timeValue = customTime || '12:00';
+                timestamp = new Date(`${customDate}T${timeValue}`).toISOString();
             }
+
+            // Make a deep copy of the basket items
+            const basketItems = JSON.parse(JSON.stringify($basket));
+
+            // Save the meal to Firestore
+            const mealId = await saveSubmittedMeal(basketItems, timestamp);
+            
+            if (mealId) {
+                // Show confirmation
+                const message = `Meal logged successfully for ${formatTimeForDisplay(timestamp)}`;
+                alert(message);
+                
+                // Clear basket and close modal
+                basket.clear();
+                closeModal();
+                
+                // Call the callback to refresh submitted meals
+                onMealSubmitted();
+            } else {
+                submissionError = "Failed to save meal. Please try again.";
+            }
+        } catch (error) {
+            console.error("Error submitting meal:", error);
+            submissionError = "An unexpected error occurred.";
+        } finally {
+            submissionInProgress = false;
         }
-        
-        // Submit the basket with the selected time
-        submitWithTime(time);
     }
     
-    function submitWithTime(time) {
-        console.log(`Submitting basket at time: ${time}`);
-        
-        // Display a confirmation message
-        const itemCount = $basket.length;
-        alert(`Logged ${itemCount} items to your meal (${time})!`);
-        
-        // Clear the basket after submission
-        basket.clear();
-        
-        // Close the modal
-        closeModal();
+    // Format time for user display
+    function formatTimeForDisplay(isoString) {
+        const date = new Date(isoString);
+        return date.toLocaleString();
     }
 </script>
 
 {#if showModal}
     <div class="modal" style="display: flex;">
-        <div class="modal-content time-modal-content">
+        <div class="modal-content">
             <span class="close-modal" on:click={closeModal}>&times;</span>
-            <h2 class="time-modal-heading">When did you eat?</h2>
+            <h2>When did you eat this?</h2>
+            
             <div class="time-options">
-                <button class="time-option-btn" on:click={() => selectTime('Now')}>
-                    <span class="time-icon">⏱️</span>
-                    <span>Now</span>
-                </button>
-                <button class="time-option-btn" on:click={() => selectTime('20 min ago')}>
-                    <span class="time-icon">⏰</span>
-                    <span>20 min ago</span>
-                </button>
-                <button class="time-option-btn" on:click={() => selectTime('1 hour ago')}>
-                    <span class="time-icon">🕒</span>
-                    <span>1 hour ago</span>
-                </button>
-                <button class="time-option-btn" on:click={() => selectTime('Custom')}>
-                    <span class="time-icon">📆</span>
-                    <span>Custom</span>
-                </button>
+                <label class="time-option">
+                    <input 
+                        type="radio" 
+                        name="timeOption" 
+                        value="now" 
+                        bind:group={selectedTime} 
+                    />
+                    <span>Now (Current time)</span>
+                </label>
+                
+                <label class="time-option">
+                    <input 
+                        type="radio" 
+                        name="timeOption" 
+                        value="custom" 
+                        bind:group={selectedTime} 
+                    />
+                    <span>Custom time</span>
+                </label>
+                
+                {#if selectedTime === 'custom'}
+                    <div class="custom-time-inputs">
+                        <div class="input-group">
+                            <label for="date-input">Date:</label>
+                            <input 
+                                type="date" 
+                                id="date-input"
+                                bind:value={customDate}
+                                max={today}
+                            />
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="time-input">Time:</label>
+                            <input 
+                                type="time" 
+                                id="time-input"
+                                bind:value={customTime}
+                            />
+                        </div>
+                    </div>
+                {/if}
             </div>
-            {#if mealTime === 'Custom'}
-                <div class="custom-time-container">
-                    <input type="datetime-local" id="customTimeInput" class="custom-time-input" />
-                    <button class="custom-time-submit" on:click={() => selectTime(`Custom`)}>
-                        <span class="time-icon">✓</span>
-                        <span>Confirm</span>
-                    </button>
-                </div>
+            
+            {#if submissionError}
+                <p class="error-message">{submissionError}</p>
             {/if}
+            
+            <button 
+                class="submit-btn" 
+                on:click={handleSubmit} 
+                disabled={submissionInProgress || $basket.length === 0}
+            >
+                {#if submissionInProgress}
+                    Submitting...
+                {:else}
+                    Submit
+                {/if}
+            </button>
         </div>
     </div>
 {/if}
@@ -92,103 +163,114 @@
     }
     
     .modal-content {
-        background: white;
-        padding: 40px; /* Increased from 25px */
-        border-radius: 20px; /* Increased from 12px */
-        text-align: center;
-        max-width: 800px; /* Increased from 400px */
+        background-color: white;
         width: 90%;
+        max-width: 500px;
+        border-radius: 20px;
+        padding: 30px;
         position: relative;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); /* Enhanced shadow */
-    }
-    
-    .time-modal-heading {
-        margin-top: 15px;
-        margin-bottom: 30px;
-        color: #333;
-        font-size: 32px; /* Increased from default */
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     }
     
     .close-modal {
         position: absolute;
-        top: 25px;
-        right: 25px;
-        font-size: 36px; /* Increased from 24px */
+        top: 20px;
+        right: 20px;
+        font-size: 32px;
         cursor: pointer;
-        color: #999;
+        color: #666;
     }
     
     .close-modal:hover {
         color: #333;
     }
     
+    h2 {
+        margin-bottom: 25px;
+        font-size: 28px;
+        text-align: center;
+    }
+    
     .time-options {
-        display: grid; /* Changed from flex to grid */
-        grid-template-columns: repeat(2, 1fr); /* 2 columns */
-        gap: 20px; /* Increased from 12px */
-        margin: 30px 0; /* Increased from 20px */
+        margin-bottom: 30px;
     }
     
-    .time-option-btn {
+    .time-option {
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 16px; /* Increased from 12px */
-        background-color: #C26C51FF;
-        color: white;
-        border: none;
-        border-radius: 16px; /* Increased from 8px */
-        padding: 25px; /* Increased from 12px 20px */
-        font-size: 24px; /* Increased from 16px */
-        font-weight: bold;
+        padding: 15px;
+        border: 2px solid #eee;
+        border-radius: 10px;
+        margin-bottom: 15px;
         cursor: pointer;
-        transition: transform 0.2s, background-color 0.2s;
-        min-height: 120px; /* Added fixed height */
+        transition: all 0.2s;
     }
     
-    .time-option-btn:hover {
-        background-color: #a35a42;
-        transform: translateY(-4px); /* Increased effect */
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); /* Added shadow on hover */
+    .time-option:hover {
+        border-color: #ddd;
+        background-color: #f9f9f9;
     }
     
-    .time-icon {
-        font-size: 40px; /* Increased from 20px */
+    .time-option input[type="radio"] {
+        margin-right: 10px;
+        transform: scale(1.5);
     }
     
-    .custom-time-container {
-        margin-top: 30px; /* Increased from 20px */
-        display: flex;
-        flex-direction: column;
-        gap: 20px; /* Increased from 12px */
+    .custom-time-inputs {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 10px;
     }
     
-    .custom-time-input {
-        padding: 20px; /* Increased from 12px */
-        border: 1px solid #ddd;
-        border-radius: 12px; /* Increased from 8px */
-        font-size: 24px; /* Increased from 16px */
+    .input-group {
+        margin-bottom: 15px;
     }
     
-    .custom-time-submit {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 15px; /* Increased from 10px */
+    .input-group:last-child {
+        margin-bottom: 0;
+    }
+    
+    .input-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    
+    .input-group input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+    
+    .submit-btn {
         background-color: #C26C51FF;
         color: white;
+        padding: 15px 30px;
         border: none;
-        border-radius: 16px; /* Increased from 8px */
-        padding: 25px; /* Increased from 12px 20px */
-        font-size: 24px; /* Increased from 16px */
+        border-radius: 10px;
+        width: 100%;
+        font-size: 18px;
         font-weight: bold;
         cursor: pointer;
         transition: background-color 0.2s;
     }
     
-    .custom-time-submit:hover {
+    .submit-btn:hover:not([disabled]) {
         background-color: #a35a42;
-        transform: translateY(-4px); /* Added transform effect */
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); /* Added shadow */
+    }
+    
+    .submit-btn:disabled {
+        background-color: #ddd;
+        cursor: not-allowed;
+    }
+    
+    .error-message {
+        color: #e74c3c;
+        margin-bottom: 15px;
+        text-align: center;
+        font-size: 14px;
     }
 </style>

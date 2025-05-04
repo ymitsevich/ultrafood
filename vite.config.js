@@ -10,10 +10,15 @@ export default defineConfig({
             }
         })
     ],
+    base: '/ultrafood/', // Base path for GitHub Pages
     server: {
         port: 3123,
         host: '0.0.0.0',
         strictPort: true,
         hmr: false // Disable HMR globally
+    },
+    build: {
+        outDir: 'dist',
+        emptyOutDir: true
     }
 });

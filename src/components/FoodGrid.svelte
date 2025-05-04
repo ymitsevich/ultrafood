@@ -33,7 +33,9 @@
         <div class="food-item">
             <button class="food-btn" on:click={() => addToBasket(food)}>
                 <div class="food-visual">
-                    {#if food.imageData}
+                    {#if food.imageUrl}
+                        <div class="food-image" style="background-image: url('{food.imageUrl}')"></div>
+                    {:else if food.imageData}
                         <div class="food-image" style="background-image: url('{food.imageData}')"></div>
                     {:else}
                         <div class="food-emoji">{food.emoji}</div>
@@ -159,12 +161,12 @@
     }
     
     .food-image {
-        width: 160px;
-        height: 160px;
+        width: 120px;
+        height: 120px;
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
-        border-radius: 12px;
+        border-radius: 8px;
         margin-bottom: 5px;
     }
 </style>
