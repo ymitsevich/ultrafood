@@ -64,7 +64,6 @@
                 />
                 <button on:click={setCustomAmount} class="custom-amount-btn">Add</button>
             </div>
-            <!-- Removed save button as we now save immediately upon selecting an amount -->
         </div>
     </div>
 {/if}
@@ -141,32 +140,36 @@
     
     .custom-amount {
         display: flex;
-        gap: 15px; /* Increased from 10px */
-        margin: 30px 0; /* Increased from 20px */
+        justify-content: center;
+        margin: 20px auto;
+        width: 80%; /* Keep width at 80% */
+    }
+    
+    /* Override any styles from main.css */
+    :global(.custom-amount) {
+        margin: 20px auto !important;
+        width: 80% !important;
     }
     
     .custom-amount input {
         flex: 1;
-        padding: 20px; /* Increased from 12px */
-        border: 2px solid #ddd; /* Increased border */
-        border-radius: 12px; /* Increased from 8px */
-        font-size: 24px; /* Increased from 16px */
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 8px 0 0 8px;
+        font-size: 16px;
+        height: 40px; /* Reduced from 50px */
     }
     
     .custom-amount-btn {
         background-color: #C26C51FF;
         color: white;
         border: none;
-        border-radius: 12px; /* Increased from 8px */
-        padding: 0 25px; /* Increased from 0 15px */
+        border-radius: 0 8px 8px 0;
+        padding: 0 15px;
         cursor: pointer;
-        font-size: 24px; /* Increased from default */
+        font-size: 16px; /* Reduced from 18px */
         font-weight: bold;
-    }
-    
-    .custom-amount-btn:hover {
-        background-color: #a35a42;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        height: 40px; /* Reduced from 50px */
+        white-space: nowrap;
     }
 </style>

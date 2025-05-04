@@ -19,9 +19,23 @@
     function closeModal() {
         showModal = false;
     }
+    
+    // Set time to 20 minutes earlier
+    function set20minEarlier() {
+        const date = new Date();
+        date.setMinutes(date.getMinutes() - 20);
+        return date.toISOString();
+    }
+    
+    // Set time to 1 hour earlier
+    function set1hourEarlier() {
+        const date = new Date();
+        date.setHours(date.getHours() - 1);
+        return date.toISOString();
+    }
 
-    // Handle meal submission
-    async function handleSubmit() {
+    // Handle meal submission with specific time
+    async function submitWithTime(timeOption) {
         if ($basket.length === 0) return;
 
         let timestamp;
@@ -30,9 +44,13 @@
 
         try {
             // Format the timestamp based on selection
-            if (selectedTime === 'now') {
+            if (timeOption === 'now') {
                 timestamp = new Date().toISOString();
-            } else if (selectedTime === 'custom') {
+            } else if (timeOption === '20min') {
+                timestamp = set20minEarlier();
+            } else if (timeOption === '1hour') {
+                timestamp = set1hourEarlier();
+            } else if (timeOption === 'custom') {
                 if (!customDate) {
                     submissionError = "Please select a date";
                     submissionInProgress = false;
@@ -76,6 +94,11 @@
         const date = new Date(isoString);
         return date.toLocaleString();
     }
+    
+    // Toggle custom time option
+    function showCustomTimeInput() {
+        selectedTime = 'custom';
+    }
 </script>
 
 {#if showModal}
@@ -85,25 +108,20 @@
             <h2>When did you eat this?</h2>
             
             <div class="time-options">
-                <label class="time-option">
-                    <input 
-                        type="radio" 
-                        name="timeOption" 
-                        value="now" 
-                        bind:group={selectedTime} 
-                    />
-                    <span>Now (Current time)</span>
-                </label>
-                
-                <label class="time-option">
-                    <input 
-                        type="radio" 
-                        name="timeOption" 
-                        value="custom" 
-                        bind:group={selectedTime} 
-                    />
-                    <span>Custom time</span>
-                </label>
+                <div class="time-buttons-grid">
+                    <button class="time-btn" on:click={() => submitWithTime('now')}>
+                        Now
+                    </button>
+                    <button class="time-btn" on:click={() => submitWithTime('20min')}>
+                        20min earlier
+                    </button>
+                    <button class="time-btn" on:click={() => submitWithTime('1hour')}>
+                        1hr earlier
+                    </button>
+                    <button class="time-btn custom-time-btn" on:click={showCustomTimeInput}>
+                        Custom time
+                    </button>
+                </div>
                 
                 {#if selectedTime === 'custom'}
                     <div class="custom-time-inputs">
@@ -125,6 +143,18 @@
                                 bind:value={customTime}
                             />
                         </div>
+                        
+                        <button 
+                            class="submit-btn custom-submit-btn" 
+                            on:click={() => submitWithTime('custom')} 
+                            disabled={submissionInProgress || !customDate}
+                        >
+                            {#if submissionInProgress}
+                                Submitting...
+                            {:else}
+                                Submit
+                            {/if}
+                        </button>
                     </div>
                 {/if}
             </div>
@@ -132,18 +162,6 @@
             {#if submissionError}
                 <p class="error-message">{submissionError}</p>
             {/if}
-            
-            <button 
-                class="submit-btn" 
-                on:click={handleSubmit} 
-                disabled={submissionInProgress || $basket.length === 0}
-            >
-                {#if submissionInProgress}
-                    Submitting...
-                {:else}
-                    Submit
-                {/if}
-            </button>
         </div>
     </div>
 {/if}
@@ -192,28 +210,41 @@
     }
     
     .time-options {
-        margin-bottom: 30px;
+        margin-bottom: 20px;
     }
     
-    .time-option {
-        display: flex;
-        align-items: center;
-        padding: 15px;
+    .time-buttons-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .time-btn {
+        padding: 15px 10px;
         border: 2px solid #eee;
         border-radius: 10px;
-        margin-bottom: 15px;
+        background-color: #f9f9f9;
+        font-size: 16px;
+        font-weight: bold;
         cursor: pointer;
         transition: all 0.2s;
+        height: 60px;
     }
     
-    .time-option:hover {
-        border-color: #ddd;
-        background-color: #f9f9f9;
+    .time-btn:hover {
+        border-color: #C26C51FF;
+        background-color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
     
-    .time-option input[type="radio"] {
-        margin-right: 10px;
-        transform: scale(1.5);
+    .time-btn:active {
+        transform: translateY(0);
+    }
+    
+    .custom-time-btn {
+        color: #C26C51FF;
     }
     
     .custom-time-inputs {
@@ -227,8 +258,8 @@
         margin-bottom: 15px;
     }
     
-    .input-group:last-child {
-        margin-bottom: 0;
+    .input-group:last-of-type {
+        margin-bottom: 20px;
     }
     
     .input-group label {

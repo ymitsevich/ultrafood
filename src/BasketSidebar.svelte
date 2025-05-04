@@ -79,18 +79,12 @@
                         {:else}
                             <div class="basket-item-emoji">{item.emoji}</div>
                         {/if}
+                        <div class="remove-icon" on:click={() => removeItem(index)}>×</div>
                     </div>
                     <div class="basket-item-details">
-                        <div class="basket-item-name">{item.name}</div>
-                        <div class="basket-item-amount">{item.amount}</div>
+                        <div class="basket-item-name" title="{item.name}">{item.name}</div>
+                        <div class="basket-item-amount" title="{item.amount}">{item.amount}</div>
                     </div>
-                    <button 
-                        class="basket-item-remove" 
-                        on:click={() => removeItem(index)}
-                        aria-label="Remove {item.name}"
-                    >
-                        ✕
-                    </button>
                 </div>
             {/each}
         {/if}
@@ -98,20 +92,12 @@
     
     {#if $basket.length > 0}
         <div class="submit-buttons">
-            <button 
-                class="submit-basket now-btn" 
-                on:click={submitNow} 
-                title="Submit Now"
-            >
-                ⏱️
-            </button>
-            <button 
-                class="submit-basket time-btn" 
-                on:click={onSubmitBasket} 
-                title="Choose Time"
-            >
+            <div class="submit-icon now-icon" on:click={submitNow} title="Submit Now">
                 ✓
-            </button>
+            </div>
+            <div class="submit-icon check-icon" on:click={onSubmitBasket} title="Choose Time">
+                ⏱️
+            </div>
         </div>
     {/if}
 </div>
@@ -122,12 +108,19 @@
         flex-direction: column;
         height: 100%;
         background-color: #f5f5f5;
+        width: 7%; 
+        min-width: 80px;
+        max-width: 120px;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+        position: relative; /* Change from fixed to relative */
+        z-index: 5;
     }
     
     .basket-items {
         flex: 1;
         overflow-y: auto;
-        padding: 10px;
+        padding: 8px 6px;
+        overflow-x: hidden;
     }
     
     .empty-basket {
@@ -140,52 +133,71 @@
     
     .basket-item {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        padding: 10px;
+        padding: 8px 4px;
         background-color: white;
         border-radius: 10px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         margin-bottom: 8px;
+        width: 100%;
+        box-sizing: border-box;
+        position: relative;
     }
     
     .basket-item-details {
-        flex: 1;
+        width: 100%;
+        margin-top: 5px;
+        text-align: center;
     }
     
     .basket-item-name {
         font-weight: 500;
-        margin-bottom: 2px;
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .basket-item-amount {
-        font-size: 12px;
+        font-size: 10px;
         color: #666;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
-    .basket-item-remove {
-        background: none;
-        border: none;
+    .remove-icon {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: rgba(255,255,255,0.9);
         color: #999;
-        cursor: pointer;
-        font-size: 16px;
-        padding: 5px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        cursor: pointer;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        opacity: 0.7;
         transition: all 0.2s;
     }
     
-    .basket-item-remove:hover {
+    .remove-icon:hover {
+        opacity: 1;
         color: #e74c3c;
-        background-color: rgba(231, 76, 60, 0.1);
+        transform: scale(1.1);
     }
     
     .basket-item-visual {
+        position: relative;
         display: flex;
         justify-content: center;
         align-items: center;
-        width: 40px;
-        height: 40px;
-        font-size: 24px;
-        margin-right: 10px;
+        width: 100%;
     }
     
     .basket-item-emoji {
@@ -203,41 +215,45 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 10px;
-        margin: 15px 5px;
+        padding: 10px 0;
         width: 100%;
+        background: rgba(255,255,255,0.5);
+        gap: 8px;
     }
 
-    .submit-basket {
-        background-color: #C26C51FF;
-        color: white;
-        border: none;
+    .submit-icon {
+        width: 30px;
+        height: 30px;
         border-radius: 50%;
-        padding: 12px;
-        font-weight: bold;
-        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 50px;
-        height: 50px;
-        flex-shrink: 0;
-        transition: background-color 0.2s, transform 0.1s;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 16px;
+        opacity: 0.8;
     }
     
-    .submit-basket:active {
-        transform: scale(0.95);
+    .submit-icon:hover {
+        opacity: 1;
+        transform: scale(1.1);
     }
-
-    .now-btn {
-        background-color: #4a6da7;
+    
+    .now-icon {
+        background: rgba(74, 109, 167, 0.2);
+        color: #4a6da7;
     }
-
-    .now-btn:hover {
-        background-color: #3a5d97;
+    
+    .check-icon {
+        background: rgba(194, 108, 81, 0.2);
+        color: #C26C51FF;
     }
-
-    .time-btn:hover {
-        background-color: #a35a42;
+    
+    .now-icon:hover {
+        background: rgba(74, 109, 167, 0.3);
+    }
+    
+    .check-icon:hover {
+        background: rgba(194, 108, 81, 0.3);
     }
 </style>

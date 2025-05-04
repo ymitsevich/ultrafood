@@ -22,7 +22,7 @@ body {
 
 /* Sidebar Basket */
 .basket-sidebar {
-    width: 100px; /* Increased from 50px to make it 2x wider */
+    width: 70px;
     background-color: #f1f1f1;
     border-right: 1px solid #ddd;
     display: flex;
@@ -37,7 +37,7 @@ body {
 }
 
 .basket-sidebar:hover {
-    width: 250px; /* Increased from 180px to maintain proportion */
+    width: 220px;
 }
 
 .basket-items {
@@ -111,65 +111,71 @@ body {
 }
 
 .submit-basket {
-    background-color: #C26C51FF; /* Changed from #28a745 (green) to pizza-like tomato/red color */
+    background-color: #C26C51FF;
     color: white;
     border: none;
     padding: 12px;
     margin: 10px 5px;
-    border-radius: 50%; /* Changed to circle for icon-only button */
+    border-radius: 50%;
     font-weight: bold;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 50px; /* Set fixed width */
-    height: 50px; /* Set fixed height */
-    align-self: center; /* Center in the sidebar */
+    width: 50px;
+    height: 50px;
+    align-self: center;
 }
 
 .submit-icon {
-    font-size: 24px; /* Increased icon size */
+    font-size: 24px;
 }
 
 /* Main Content */
 .main-content {
     flex: 1;
-    margin-left: 100px; /* Adjusted to match wider sidebar */
-    width: calc(100% - 100px); /* Adjusted calculation for wider sidebar */
+    margin-left: 70px;
+    width: calc(100% - 70px);
 }
 
 .categories {
     display: flex;
     overflow-x: auto;
-    padding: 20px 15px; /* Increased padding for larger buttons */
-    background-color: #f8f9fa; /* Changed background color to match body background to eliminate stripe */
+    padding: 15px;
+    background-color: #f8f9fa;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+.categories::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, and Opera */
 }
 
 .category-btn {
     flex: 0 0 auto;
-    padding: 20px 40px; /* Increased 2x from previous 12px 22px */
-    margin: 0 12px; /* Doubled margin */
+    padding: 15px 30px;
+    margin: 0 8px;
     background-color: white;
     border: none;
-    border-radius: 30px; /* Increased from 20px */
-    font-size: 28px; /* Increased 2x from previous 14px */
+    border-radius: 25px;
+    font-size: 18px;
     font-weight: bold;
     color: #555;
     white-space: nowrap;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15); /* Enhanced shadow */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }
 
 .category-btn.active {
-    background-color: #C26C51FF; /* Changed from #28a745 (green) to pizza-like tomato/red color */
+    background-color: #C26C51FF;
     color: white;
 }
 
 .food-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 15px;
     padding: 15px;
     flex-grow: 1;
@@ -192,7 +198,7 @@ body {
     background: transparent;
     border: none;
     border-radius: 15px;
-    padding: 20px 10px;
+    padding: 15px 10px;
     aspect-ratio: 1/1;
     cursor: pointer;
     transition: transform 0.1s;
@@ -205,15 +211,16 @@ body {
 }
 
 .food-emoji {
-    font-size: 120px; /* Increased from 48px to make icons 2-3x larger */
-    margin-bottom: 15px; /* Increased spacing below emoji */
-    line-height: 1; /* Ensure proper vertical spacing */
+    font-size: 70px;
+    margin-bottom: 10px;
+    line-height: 1;
 }
 
 .food-name {
-    font-size: 18px; /* Slightly increased for better proportion */
+    font-size: 14px;
     font-weight: bold;
     color: #333;
+    text-align: center;
 }
 
 .default-amount {
@@ -232,8 +239,8 @@ body {
     position: absolute;
     top: 10px;
     right: 10px;
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background-color: rgba(255, 255, 255, 0.9);
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
@@ -245,7 +252,7 @@ body {
 }
 
 .edit-icon {
-    font-size: 20px;
+    font-size: 16px;
 }
 
 /* Modal */
@@ -270,6 +277,7 @@ body {
     padding: 25px;
     position: relative;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    margin: 20px;
 }
 
 .close-modal {
@@ -304,9 +312,9 @@ body {
 }
 
 .amount-btn.active {
-    border-color: #C26C51FF; /* Changed from #28a745 (green) to pizza-like tomato/red color */
-    background-color: #FFEBE5; /* Lighter shade of the pizza color for the background */
-    color: #C26C51FF; /* Changed from #28a745 (green) to pizza-like tomato/red color */
+    border-color: #C26C51FF;
+    background-color: #FFEBE5;
+    color: #C26C51FF;
     font-weight: bold;
 }
 
@@ -324,7 +332,7 @@ body {
 
 .save-amount-btn {
     width: 100%;
-    background-color: #C26C51FF; /* Changed from #28a745 (green) to pizza-like tomato/red color */
+    background-color: #C26C51FF;
     color: white;
     border: none;
     border-radius: 8px;
@@ -365,46 +373,92 @@ body {
     font-weight: bold;
 }
 
-.custom-time input[type="datetime-local"] {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 16px;
-}
-
-/* Responsive adjustments */
-@media (min-width: 576px) {
-    .food-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-@media (min-width: 768px) {
-    .food-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
+/* Media Queries for Responsive Design */
+/* Small screens (mobile phones) */
+@media screen and (max-width: 480px) {
     .basket-sidebar {
-        width: 120px; /* Increased from 60px to be 2x wider */
+        width: 50px;
     }
-
+    
+    .basket-sidebar:hover {
+        width: 200px;
+    }
+    
     .main-content {
-        margin-left: 120px; /* Adjusted to match wider sidebar */
-        width: calc(100% - 120px); /* Adjusted calculation */
+        margin-left: 50px;
+        width: calc(100% - 50px);
+    }
+    
+    .food-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    .food-emoji {
+        font-size: 50px;
+        margin-bottom: 8px;
+    }
+    
+    .food-name {
+        font-size: 12px;
+    }
+    
+    .category-btn {
+        padding: 10px 15px;
+        margin: 0 6px;
+        font-size: 14px;
+    }
+    
+    .edit-btn {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .edit-icon {
+        font-size: 12px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+        max-width: 90%;
     }
 }
 
-@media (min-width: 992px) {
+/* Medium screens (tablets) */
+@media screen and (min-width: 481px) and (max-width: 768px) {
+    .food-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+    
+    .food-emoji {
+        font-size: 60px;
+    }
+}
+
+/* Large screens (laptops/desktops) */
+@media screen and (min-width: 769px) and (max-width: 1200px) {
     .food-grid {
         grid-template-columns: repeat(4, 1fr);
     }
 }
 
-@media (min-width: 1200px) {
+/* Extra large screens */
+@media screen and (min-width: $1201px) {
     .food-grid {
         grid-template-columns: repeat(5, 1fr);
-        max-width: 1400px;
-        margin: 0 auto;
+    }
+}
+
+/* For touch devices */
+@media (hover: none) {
+    .basket-sidebar:hover {
+        width: 70px; /* Don't expand on touch devices, will need a toggle button instead */
+    }
+    
+    /* We could add a .expanded class for touch devices instead */
+    .basket-sidebar.expanded {
+        width: 220px;
     }
 }

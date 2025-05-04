@@ -332,30 +332,55 @@
         display: flex;
         height: 100vh;
         overflow: hidden;
+        gap: 15px; /* Add consistent gap */
     }
     
     .main-content {
         flex: 1;
-        padding: 20px;
+        padding: 15px 20px 20px;
         overflow-y: auto;
         position: relative;
+        margin-left: 0; /* Reset margin since we're using gap */
+        width: auto; /* Let flex handle the width */
     }
     
     .categories {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+        flex-wrap: nowrap;
+        gap: 0px; /* Reduced from 2px to 0px */
         margin-bottom: 20px;
+        overflow-x: auto;
+        padding-bottom: 10px; /* Add padding to show scrollbar clearly */
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        scrollbar-width: thin; /* For Firefox */
+        white-space: nowrap;
+    }
+    
+    /* Style the scrollbar for webkit browsers */
+    .categories::-webkit-scrollbar {
+        height: 4px;
+    }
+    
+    .categories::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .categories::-webkit-scrollbar-thumb {
+        background: #C26C51FF;
+        border-radius: 10px;
     }
     
     .category-btn {
-        padding: 10px 15px;
+        padding: 4px 8px; /* Further reduced padding from 6px 10px */
         background: #f0f0f0;
         border: 1px solid #ddd;
         border-radius: 20px;
         cursor: pointer;
         font-size: 16px;
         transition: all 0.2s;
+        flex-shrink: 0; /* Prevent button from shrinking */
+        margin-right: 1px; /* Add minimal margin instead of gap */
     }
     
     .category-btn.active {
