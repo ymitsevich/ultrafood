@@ -1,6 +1,6 @@
 <script>
     import { onMount, afterUpdate } from 'svelte';
-    import { uploadFoodImage } from '../cloudinary.js';
+    import { uploadFoodImage, centerObject, enhanceImage } from '../cloudinary.js';
     import { saveFoodItem } from '../firebase.js'; // For database operations
     
     // Exported props
@@ -65,17 +65,31 @@
             // If there's an image, upload it to Cloudinary
             if (imageBlob) {
                 try {
-                    // Upload to Cloudinary and get URL
-                    const imageUrl = await uploadFoodImage(imageBlob, foodId);
-                    newFood.imageUrl = imageUrl; // Store Cloudinary URL
+                    // Upload to Cloudinary with auto-centering enabled
+                    const imageUrl = await uploadFoodImage(imageBlob, foodId, {
+                        autoCenter: true // Enable AI-powered centering during upload
+                    });
                     
-                    console.log('Image uploaded to Cloudinary:', imageUrl);
+                    // Apply additional enhancements to ensure the object is properly centered
+                    const enhancedUrl = enhanceImage(
+                        centerObject(imageUrl, {
+                            width: 400,
+                            height: 400,
+                            zoom: 1.1 // Slight zoom to better focus on the food item
+                        }),
+                        { improve: true }
+                    );
+                    
+                    newFood.imageUrl = enhancedUrl; // Store enhanced Cloudinary URL
+                    console.log('Image uploaded to Cloudinary with auto-centering:', enhancedUrl);
                 } catch (error) {
                     console.error('Failed to upload image to Cloudinary:', error);
-                    uploadError = 'Failed to upload image. Using local image as fallback.';
+                    uploadError = 'Failed to upload image to cloud storage.';
                     
-                    // Fallback to data URL if Cloudinary upload fails
-                    newFood.imageData = imageData;
+                    // Instead of storing a base64 data URL in Firebase, we'll just use the emoji
+                    // This prevents large binary data from being stored in Firebase
+                    console.log('Using emoji instead of image due to upload failure');
+                    // We're NOT setting newFood.imageData = imageData;
                 }
             }
             
