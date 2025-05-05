@@ -64,9 +64,9 @@
             {#each $basket as item, index (index)}
                 <div class="basket-item">
                     <div class="basket-item-visual">
-                        {#if item.imageUrl}
+                        {#if item.imageUrl || item.image}
                             <img 
-                                src={item.imageUrl} 
+                                src={item.imageUrl || item.image} 
                                 alt={item.name} 
                                 class="basket-item-image"
                             />

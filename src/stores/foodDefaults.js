@@ -10,6 +10,12 @@ export const foodDefaults = {
     
     // Set default amount for a food item
     setDefault: (foodId, amount) => {
+        // Validate input parameters
+        if (!foodId) {
+            console.error("Cannot set default: Missing food ID");
+            return;
+        }
+        
         // Update local store
         foodDefaultsStore.update(defaults => ({
             ...defaults,

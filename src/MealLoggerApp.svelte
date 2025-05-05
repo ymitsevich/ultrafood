@@ -351,8 +351,8 @@
                                     {#each meal.items as item}
                                         <div class="meal-item">
                                             <div class="meal-item-visual">
-                                                {#if item.imageUrl}
-                                                    <img src={item.imageUrl} alt={item.name} class="meal-item-image" />
+                                                {#if item.imageUrl || item.image}
+                                                    <img src={item.imageUrl || item.image} alt={item.name} class="meal-item-image" />
                                                 {:else if item.imageData}
                                                     <img src={item.imageData} alt={item.name} class="meal-item-image" />
                                                 {:else}

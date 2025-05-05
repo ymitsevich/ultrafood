@@ -202,6 +202,12 @@ export async function getFoodItems() {
  * @param {Object} data - The updated data
  */
 export async function updateFoodItem(id, data) {
+  // Validate parameters to prevent errors
+  if (!id) {
+    console.error("Error updating food item: Missing ID");
+    return;
+  }
+
   // In local-only mode, update in memory
   if (LOCAL_ONLY_MODE) {
     const index = localFoodItems.findIndex(item => item.id === id);

@@ -17,7 +17,7 @@
     onMount(() => {
         // Initialize loading state for all images
         foodItems.forEach(item => {
-            if (item.imageUrl || item.imageData) {
+            if (item.imageUrl || item.image || item.imageData) {
                 loadingImages[item.id] = true;
             }
         });
@@ -63,13 +63,13 @@
             <div class="food-item" class:added-to-basket={addedToBasket[food.id]}>
                 <button class="food-btn" on:click={() => addToBasket(food)}>
                     <div class="food-visual">
-                        {#if food.imageUrl}
+                        {#if food.imageUrl || food.image}
                             {#if loadingImages[food.id]}
                                 <div class="loading-placeholder"></div>
                             {/if}
                             <div 
                                 class="food-image" 
-                                style="background-image: url('{food.imageUrl}')" 
+                                style="background-image: url('{food.imageUrl || food.image}')" 
                                 class:hidden={loadingImages[food.id]}
                                 on:load={() => imageLoaded(food.id)}
                             ></div>
