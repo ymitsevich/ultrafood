@@ -1,8 +1,13 @@
 // Pixabay API service for food image search
 // Documentation: https://pixabay.com/api/docs/
 
-// Your Pixabay API key
-const PIXABAY_API_KEY = '50103640-134c27f9249cb590ece1f9e42';
+// Get Pixabay API key from environment variables
+const PIXABAY_API_KEY = import.meta.env.VITE_PIXABAY_API_KEY || '';
+
+// Verify API key exists
+if (!PIXABAY_API_KEY) {
+    console.warn('Pixabay API key not found in environment variables. Image search will not work.');
+}
 
 /**
  * Search for food images on Pixabay

@@ -5,13 +5,19 @@
     // Props
     export let searchQuery = '';
     export let onImageSelect = () => {};
+    export let selectedImage = null; // Added to receive the currently selected image from the parent
     
     // Component state
     let searchResults = [];
     let isSearching = false;
     let searchError = null;
     let searchTimer = null;
-    let selectedImageIndex = -1;
+    let selectedImageId = selectedImage?.id || null;
+    
+    // Update selectedImageId when selectedImage changes (from parent)
+    $: if (selectedImage) {
+        selectedImageId = selectedImage.id;
+    }
     
     // Perform search whenever searchQuery changes (with debounce)
     $: if (searchQuery && searchQuery.length >= 3) {
@@ -19,7 +25,7 @@
         searchTimer = setTimeout(() => {
             performSearch(searchQuery);
         }, 500); // Debounce 500ms
-    } else {
+    } else if (searchQuery.length < 3 && !selectedImage) {
         clearTimeout(searchTimer);
         searchResults = [];
     }
@@ -46,30 +52,42 @@
                     tags: img.tags
                 }));
                 
-                console.log(`Found ${searchResults.length} valid images for "${query}"`);
-                if (searchResults.length > 0) {
-                    console.log(`First image URL: ${searchResults[0].smallImageUrl}`);
+                // Remove the selected image from search results to avoid duplicates
+                if (selectedImage) {
+                    searchResults = searchResults.filter(img => img.id !== selectedImage.id);
                 }
+                
+                console.log(`Found ${searchResults.length} valid images for "${query}"`);
             } else {
-                searchResults = [];
+                // Don't clear results if we have a selected image
+                if (!selectedImage) {
+                    searchResults = [];
+                } else {
+                    searchResults = [];
+                }
                 console.log(`No valid results found for "${query}"`);
             }
         } catch (error) {
             console.error(`Error searching Pixabay:`, error);
             searchError = error.message || 'Failed to search for images';
-            searchResults = [];
+            if (!selectedImage) {
+                searchResults = [];
+            }
         } finally {
             isSearching = false;
-            console.log(`isSearching: ${isSearching}`);
-            console.log(`searchResults length: ${searchResults.length}`);
-            console.log(`searchQuery length: ${searchQuery.length}`);
         }
     }
     
     // Handle image selection
-    function selectImage(image, index) {
-        selectedImageIndex = index;
+    function selectImage(image) {
+        selectedImageId = image.id;
         onImageSelect(image);
+    }
+    
+    // Clear selected image
+    function clearSelectedImage() {
+        selectedImageId = null;
+        onImageSelect(null);
     }
 
     // On mount, perform an initial search if query is provided
@@ -82,24 +100,31 @@
 
 <!-- Search results display -->
 <div class="pixabay-search">
-    {#if isSearching}
+    {#if isSearching && !selectedImage}
         <div class="search-status">Searching for images...</div>
-    {:else if searchError}
+    {:else if searchError && !selectedImage}
         <div class="search-error">Error: {searchError}</div>
-    {:else if searchResults.length > 0}
+    {:else if (selectedImage || searchResults.length > 0)}
         <div class="image-grid">
-            {#each searchResults as image, i}
+            <!-- Always show selected image first if available -->
+            {#if selectedImage}
+                <div class="image-item selected pinned">
+                    <img src={selectedImage.smallImageUrl} alt="Selected image" />
+                    <div class="selected-overlay">
+                        <span class="pin-indicator">📌</span>
+                        <button class="clear-selection-button" on:click={clearSelectedImage}>×</button>
+                    </div>
+                </div>
+            {/if}
+            
+            <!-- Show other search results -->
+            {#each searchResults as image}
                 <div 
-                    class="image-item" 
-                    class:selected={selectedImageIndex === i}
-                    on:click={() => selectImage(image, i)}
+                    class="image-item"
+                    class:selected={image.id === selectedImageId}
+                    on:click={() => selectImage(image)}
                 >
                     <img src={image.smallImageUrl} alt={image.tags || 'Food image'} />
-                    {#if selectedImageIndex === i}
-                        <div class="selected-overlay">
-                            <div class="checkmark">✓</div>
-                        </div>
-                    {/if}
                 </div>
             {/each}
         </div>
@@ -158,15 +183,23 @@
         object-fit: cover;
     }
     
+    .image-item:hover:not(.pinned) {
+        border-color: #95a5a6;
+        transform: scale(1.05);
+    }
+    
     .image-item.selected {
         border-color: #3498db;
         box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.5);
-        transform: scale(1.05);
-        z-index: 2;
     }
     
-    .image-item:hover {
-        border-color: #95a5a6;
+    .image-item.pinned {
+        cursor: default;
+        grid-column: 1;
+        grid-row: 1;
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.5);
+        transform: none; /* Don't scale up pinned item */
     }
     
     .selected-overlay {
@@ -175,22 +208,38 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(52, 152, 219, 0.3);
+        background: rgba(52, 152, 219, 0.15);
         display: flex;
-        align-items: center;
-        justify-content: center;
+        align-items: flex-start;
+        justify-content: flex-end;
     }
     
-    .checkmark {
-        background: #3498db;
-        color: white;
+    .clear-selection-button {
+        width: 22px;
+        height: 22px;
         border-radius: 50%;
-        width: 24px;
-        height: 24px;
+        background: rgba(255, 255, 255, 0.8);
+        border: none;
+        font-size: 16px;
+        font-weight: bold;
+        color: #666;
+        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
+        padding: 0;
+        margin: 4px;
+    }
+    
+    .clear-selection-button:hover {
+        background: rgba(255, 255, 255, 1);
+        color: #e74c3c;
+    }
+    
+    .pin-indicator {
+        position: absolute;
+        bottom: 4px;
+        left: 4px;
         font-size: 14px;
     }
 </style>

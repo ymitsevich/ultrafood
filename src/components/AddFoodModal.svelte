@@ -113,8 +113,12 @@
                 throw new Error("Failed to upload image");
             }
 
+            // Create a food ID (will be overwritten by the saved ID if Firebase is used)
+            const tempId = `custom_${Date.now()}`;
+            
             // Create the food item
             const newFood = {
+                id: tempId,
                 name: foodName.trim(),
                 category: currentCategory,
                 image: imageUrl,
@@ -122,7 +126,12 @@
             };
 
             // Save the food item to Firebase
-            await saveFoodItem(newFood);
+            const savedId = await saveFoodItem(newFood);
+            
+            // Update the ID if Firebase returned one
+            if (savedId) {
+                newFood.id = savedId;
+            }
             
             // Notify parent component
             if (onAddFood) onAddFood(newFood);
@@ -159,10 +168,11 @@
                 />
             </div>
             
-            <!-- Pixabay image search component -->
+            <!-- Pixabay image search component - pass selectedImage prop to persist selection -->
             <PixabayImageSearch 
                 searchQuery={foodName} 
-                onImageSelect={handlePixabayImageSelect} 
+                onImageSelect={handlePixabayImageSelect}
+                selectedImage={selectedPixabayImage}
             />
             
             <!-- Hidden file input for uploading custom images -->
