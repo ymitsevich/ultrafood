@@ -27,19 +27,26 @@ export async function searchFoodImages(query, options = {}) {
 
     try {
         const url = new URL('https://pixabay.com/api/');
+        
+        // Don't manually encode the query - let URLSearchParams handle it
+        console.log(`Searching for "${query}"`);
+        
+        // Pass the raw query and let URLSearchParams handle the encoding
         const params = {
             key: PIXABAY_API_KEY,
-            q: encodeURIComponent(query),
+            q: query,  // Raw query - URLSearchParams will encode it correctly
             image_type: opts.imageType,
             per_page: opts.perPage,
             safesearch: opts.safesearch ? 'true' : 'false',
             category: opts.category
         };
 
-        // Add parameters to URL
-        Object.keys(params).forEach(key => 
-            url.searchParams.append(key, params[key])
-        );
+        // Add parameters to URL - URLSearchParams will handle encoding
+        Object.keys(params).forEach(key => {
+            url.searchParams.append(key, params[key]);
+        });
+        
+        console.log(`API URL: ${url.toString().replace(PIXABAY_API_KEY, 'API_KEY_HIDDEN')}`);
 
         const response = await fetch(url);
         if (!response.ok) {
