@@ -9,7 +9,8 @@
         getSubmittedMeals, 
         getSubmittedMealsPaginated, 
         isFirebaseAvailable, 
-        LOCAL_ONLY_MODE 
+        LOCAL_ONLY_MODE,
+        updateSubmittedMealsWithFoodItem
     } from './firebase.js';
     
     // Import our components
@@ -18,6 +19,7 @@
     import AmountModal from './components/AmountModal.svelte';
     import TimeModal from './components/TimeModal.svelte';
     import AddFoodModal from './components/AddFoodModal.svelte';
+    import EditFoodModal from './components/EditFoodModal.svelte';
     
     // Food data and category state
     let foodData = getFoodData();
@@ -162,7 +164,9 @@
     let showAmountModal = false;
     let showTimeModal = false;
     let showAddFoodModal = false;
+    let showEditFoodModal = false; // New state for edit modal
     let selectedFood = null;
+    let editingFood = null; // Food item being edited
     
     function openAmountModal(food) {
         selectedFood = food;
@@ -175,6 +179,148 @@
     
     function openAddFoodModal() {
         showAddFoodModal = true;
+    }
+    
+    function openEditFoodModal(food) {
+        editingFood = food;
+        showEditFoodModal = true;
+    }
+    
+    async function handleSaveEditedFood(updatedFood) {
+        // Store the original food item before updates for comparison
+        const originalFood = { ...editingFood };
+        let updatedLocalUI = false;
+
+        // Find the category of the food
+        const category = updatedFood.category || currentCategory;
+        
+        // Make sure the category exists
+        if (!foodData[category]) {
+            foodData[category] = [];
+        }
+        
+        // Find and update the food item
+        const existingIndex = foodData[category].findIndex(item => item.id === updatedFood.id);
+        
+        if (existingIndex >= 0) {
+            // Update existing item in same category
+            foodData[category][existingIndex] = { ...updatedFood };
+            updatedLocalUI = true;
+        } else {
+            // If not found in current category (maybe category was changed)
+            let foundInOtherCategory = false;
+            
+            // Look for the item in all categories
+            for (const cat of Object.keys(foodData)) {
+                if (cat === category) continue; // Already checked current category
+                
+                const idx = foodData[cat].findIndex(item => item.id === updatedFood.id);
+                if (idx >= 0) {
+                    // Remove from old category
+                    foodData[cat].splice(idx, 1);
+                    // Add to new category
+                    foodData[category].push(updatedFood);
+                    foundInOtherCategory = true;
+                    updatedLocalUI = true;
+                    break;
+                }
+            }
+            
+            // If not found in any category, add it to the specified category
+            if (!foundInOtherCategory) {
+                foodData[category].push(updatedFood);
+                updatedLocalUI = true;
+            }
+        }
+        
+        // Update foodData to trigger reactivity if changes were made
+        if (updatedLocalUI) {
+            foodData = { ...foodData };
+        }
+        
+        // If category changed, switch to the new category
+        if (category !== currentCategory) {
+            currentCategory = category;
+        }
+        
+        // If not in local-only mode, also update all submitted meals containing this food item
+        if (!LOCAL_ONLY_MODE && isFirebaseAvailable()) {
+            try {
+                // Show loading state or notification
+                const updateStatus = document.createElement('div');
+                updateStatus.textContent = 'Updating submitted meals...';
+                updateStatus.style.position = 'fixed';
+                updateStatus.style.bottom = '20px';
+                updateStatus.style.left = '50%';
+                updateStatus.style.transform = 'translateX(-50%)';
+                updateStatus.style.padding = '10px 16px';
+                updateStatus.style.borderRadius = '8px';
+                updateStatus.style.fontSize = '14px';
+                updateStatus.style.backgroundColor = '#e3f2fd';
+                updateStatus.style.color = '#0d47a1';
+                updateStatus.style.border = '1px solid #bbdefb';
+                updateStatus.style.zIndex = '100';
+                document.body.appendChild(updateStatus);
+                
+                // Update all submitted meals in Firebase that contain this food item
+                await updateSubmittedMealsWithFoodItem(originalFood.id, updatedFood);
+                
+                // Refresh the loaded submitted meals to reflect changes
+                if (submittedMeals.length > 0) {
+                    await loadSubmittedMeals(true);
+                }
+                
+                // Update notification
+                updateStatus.textContent = 'Submitted meals updated successfully';
+                updateStatus.style.backgroundColor = '#e8f5e9';
+                updateStatus.style.color = '#1b5e20';
+                updateStatus.style.border = '1px solid #c8e6c9';
+                
+                // Remove notification after a delay
+                setTimeout(() => {
+                    document.body.removeChild(updateStatus);
+                }, 3000);
+                
+            } catch (error) {
+                console.error('Error updating submitted meals:', error);
+                
+                // Show error notification
+                const errorStatus = document.createElement('div');
+                errorStatus.textContent = 'Error updating submitted meals';
+                errorStatus.style.position = 'fixed';
+                errorStatus.style.bottom = '20px';
+                errorStatus.style.left = '50%';
+                errorStatus.style.transform = 'translateX(-50%)';
+                errorStatus.style.padding = '10px 16px';
+                errorStatus.style.borderRadius = '8px';
+                errorStatus.style.fontSize = '14px';
+                errorStatus.style.backgroundColor = '#ffebee';
+                errorStatus.style.color = '#c62828';
+                errorStatus.style.border = '1px solid #ffcdd2';
+                errorStatus.style.zIndex = '100';
+                document.body.appendChild(errorStatus);
+                
+                // Remove error notification after a delay
+                setTimeout(() => {
+                    document.body.removeChild(errorStatus);
+                }, 5000);
+            }
+        }
+    }
+    
+    function handleDeleteFood(foodId) {
+        // Find the food in all categories and remove it
+        for (const category of Object.keys(foodData)) {
+            const indexToRemove = foodData[category].findIndex(item => item.id === foodId);
+            if (indexToRemove >= 0) {
+                // Remove the item
+                foodData[category].splice(indexToRemove, 1);
+                
+                // Update foodData to trigger reactivity
+                foodData = { ...foodData };
+                break;
+            }
+        }
     }
     
     function openSubmittedMealsModal() {
@@ -296,6 +442,7 @@
                 foodItems={foodData[currentCategory] || []} 
                 onConfigClick={openAmountModal}
                 onAddNewFood={openAddFoodModal}
+                onEditFood={openEditFoodModal}
             />
             
             <!-- Show status message if error occurred -->
@@ -319,6 +466,14 @@
         bind:showModal={showAddFoodModal} 
         currentCategory={currentCategory}
         onAddFood={handleAddNewFood} 
+    />
+    <!-- Edit Food Modal -->
+    <EditFoodModal 
+        bind:showModal={showEditFoodModal}
+        foodItem={editingFood}
+        onSave={handleSaveEditedFood}
+        onDelete={handleDeleteFood}
+        categories={Object.keys(foodData)}
     />
     
     <!-- Submitted Meals Modal -->

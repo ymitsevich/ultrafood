@@ -9,10 +9,17 @@
     export let foodItems = [];
     export let onConfigClick;
     export let onAddNewFood;
+    export let onEditFood; // New prop for opening the edit modal
     
     // Track loading state of images
     let loadingImages = {};
     let addedToBasket = {};
+    
+    // Long press state
+    let pressTimer;
+    let longPressDuration = 500; // Time in ms to trigger a long press
+    let touchStartTime = 0;
+    let activeTouchId = null;
     
     onMount(() => {
         // Initialize loading state for all images
@@ -55,13 +62,83 @@
         e.stopPropagation();
         onConfigClick(food);
     }
+    
+    // Handle context menu (right-click) to open edit modal
+    function handleContextMenu(e, food) {
+        e.preventDefault(); // Prevent default context menu
+        if (onEditFood) {
+            onEditFood(food);
+        }
+        return false;
+    }
+    
+    // Touch event handlers for long press
+    function handleTouchStart(e, food) {
+        if (activeTouchId !== null) return; // Already processing a touch
+        
+        activeTouchId = e.targetTouches[0].identifier;
+        touchStartTime = Date.now();
+        
+        // Set a timer for long press
+        pressTimer = setTimeout(() => {
+            if (onEditFood) {
+                onEditFood(food);
+            }
+            
+            // Vibrate if supported
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+            
+        }, longPressDuration);
+    }
+    
+    function handleTouchEnd(e) {
+        clearLongPressTimer();
+        activeTouchId = null;
+    }
+    
+    function handleTouchMove(e) {
+        if (activeTouchId !== null) {
+            // Find the touch point that started the gesture
+            const touchIdx = Array.from(e.changedTouches).findIndex(
+                touch => touch.identifier === activeTouchId
+            );
+            
+            if (touchIdx !== -1) {
+                // If moved significantly, cancel the long press
+                const touch = e.changedTouches[touchIdx];
+                const moveThreshold = 10; // pixels
+                
+                if (Math.abs(touch.clientX - e.targetTouches[0].clientX) > moveThreshold ||
+                    Math.abs(touch.clientY - e.targetTouches[0].clientY) > moveThreshold) {
+                    clearLongPressTimer();
+                }
+            }
+        }
+    }
+    
+    function clearLongPressTimer() {
+        if (pressTimer) {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+        }
+    }
 </script>
 
 <div class="food-grid-container">
     <div class="food-grid">
         {#each foodItems as food (food.id)}
             <div class="food-item" class:added-to-basket={addedToBasket[food.id]}>
-                <button class="food-btn" on:click={() => addToBasket(food)}>
+                <button 
+                    class="food-btn" 
+                    on:click={() => addToBasket(food)}
+                    on:contextmenu={(e) => handleContextMenu(e, food)}
+                    on:touchstart={(e) => handleTouchStart(e, food)}
+                    on:touchend={handleTouchEnd}
+                    on:touchcancel={handleTouchEnd}
+                    on:touchmove={handleTouchMove}
+                >
                     <div class="food-visual">
                         {#if food.imageUrl || food.image}
                             {#if loadingImages[food.id]}
@@ -165,6 +242,7 @@
         height: auto;
         display: block;
         overflow: hidden;
+        touch-action: manipulation; /* Improve touch events handling */
     }
     
     .food-item:hover {
@@ -197,6 +275,8 @@
         flex-direction: column;
         align-items: center;
         text-align: center;
+        user-select: none; /* Prevent text selection during long press */
+        -webkit-user-select: none;
     }
     
     .food-visual {

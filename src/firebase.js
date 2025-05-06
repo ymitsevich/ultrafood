@@ -454,6 +454,106 @@ export async function getSubmittedMealsPaginated(pageSize = 10, lastVisible = nu
 }
 
 /**
+ * Update all submitted meals that contain a specific food item with the updated version
+ * @param {string} foodId - The ID of the food item that was updated
+ * @param {Object} updatedFood - The updated food item data
+ * @returns {Promise<number>} - Promise that resolves with the number of meals updated
+ */
+export async function updateSubmittedMealsWithFoodItem(foodId, updatedFood) {
+  // In local-only mode, update in memory
+  if (LOCAL_ONLY_MODE) {
+    let updatedCount = 0;
+    
+    localSubmittedMeals.forEach(meal => {
+      if (meal.items && Array.isArray(meal.items)) {
+        let mealUpdated = false;
+        
+        // Look for the food item in the meal items
+        meal.items.forEach((item, index) => {
+          if (item.id === foodId) {
+            // Update food item properties while preserving amount
+            const amount = item.amount;
+            meal.items[index] = { 
+              ...updatedFood,
+              amount // Keep the original amount
+            };
+            mealUpdated = true;
+          }
+        });
+        
+        if (mealUpdated) {
+          updatedCount++;
+        }
+      }
+    });
+    
+    console.log(`Updated ${updatedCount} local meals containing food ID: ${foodId}`);
+    return updatedCount;
+  }
+
+  // Firestore implementation
+  if (!db || !isFirebaseInitialized) {
+    console.error("Firestore not initialized yet");
+    return 0;
+  }
+
+  try {
+    // Step 1: Query all meals that contain the food item
+    const mealsCollection = collection(db, "submitted-meals");
+    const mealsSnapshot = await getDocs(mealsCollection);
+    
+    if (mealsSnapshot.empty) {
+      console.log("No submitted meals found");
+      return 0;
+    }
+    
+    let updatedCount = 0;
+    const updatePromises = [];
+    
+    // Step 2: For each meal, check if it contains the food item and update if needed
+    mealsSnapshot.forEach(mealDoc => {
+      const meal = mealDoc.data();
+      
+      if (meal.items && Array.isArray(meal.items)) {
+        let mealNeedsUpdate = false;
+        const updatedItems = meal.items.map(item => {
+          if (item.id === foodId) {
+            mealNeedsUpdate = true;
+            // Update food item properties while preserving amount
+            return { 
+              ...updatedFood,
+              amount: item.amount // Keep the original amount
+            };
+          }
+          return item;
+        });
+        
+        // If this meal contains the food item, update it
+        if (mealNeedsUpdate) {
+          updatePromises.push(
+            updateDoc(doc(db, "submitted-meals", mealDoc.id), {
+              items: updatedItems
+            })
+          );
+          updatedCount++;
+        }
+      }
+    });
+    
+    // Step 3: Wait for all updates to complete
+    if (updatePromises.length > 0) {
+      await Promise.all(updatePromises);
+    }
+    
+    console.log(`Updated ${updatedCount} meals in Firestore containing food ID: ${foodId}`);
+    return updatedCount;
+  } catch (error) {
+    console.error("Error updating submitted meals:", error);
+    throw error;
+  }
+}
+
+/**
  * Check if Firebase is connected and available
  * @returns {boolean} - Whether Firebase is available
  */
