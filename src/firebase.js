@@ -16,6 +16,7 @@ import {
   startAfter
 } from 'firebase/firestore';
 import { getAnalytics } from "firebase/analytics";
+import { generateMealId } from './utils.js';
 
 // Control flag to operate in local-only mode (no Firebase connections attempted)
 // Set this to false when you've created your Firestore database in the Firebase Console
@@ -274,18 +275,24 @@ export async function deleteFoodItem(id) {
  * @returns {Promise<string|null>} - Promise that resolves with the document ID or null on error
  */
 export async function saveSubmittedMeal(basketItems, timestamp) {
+  // Use the actual meal timestamp if provided, otherwise use current time
+  const mealTime = timestamp || new Date().toISOString();
+  
+  // Generate a human-readable ID based on the meal timestamp
+  const mealId = generateMealId('meal', mealTime);
+  
   const submittedMeal = {
-    id: `meal_${Date.now()}`,
+    id: mealId,
     items: basketItems,
-    timestamp: timestamp || new Date().toISOString(),
+    timestamp: mealTime,
     submittedAt: new Date().toISOString()
   };
 
   // In local-only mode, save to memory
   if (LOCAL_ONLY_MODE) {
     localSubmittedMeals.push(submittedMeal);
-    console.log("Meal saved locally with ID:", submittedMeal.id);
-    return submittedMeal.id;
+    console.log("Meal saved locally with readable ID:", mealId);
+    return mealId;
   }
 
   // Save to Firestore if available
@@ -295,10 +302,10 @@ export async function saveSubmittedMeal(basketItems, timestamp) {
   }
 
   try {
-    // Save the submitted meal to a new collection
-    await setDoc(doc(db, "submitted-meals", submittedMeal.id), submittedMeal);
-    console.log("Meal saved to Firestore with ID:", submittedMeal.id);
-    return submittedMeal.id;
+    // Save the submitted meal to a new collection using the human-readable ID
+    await setDoc(doc(db, "submitted-meals", mealId), submittedMeal);
+    console.log("Meal saved to Firestore with readable ID:", mealId);
+    return mealId;
   } catch (error) {
     console.error("Error saving meal to Firestore:", error);
     return null;

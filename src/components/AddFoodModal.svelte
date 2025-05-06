@@ -7,6 +7,7 @@
     } from "../cloudinary.js";
     import { saveFoodItem } from "../firebase.js";
     import { fetchImageAsBlob } from "../pixabay.js";
+    import { generateFoodId } from "../utils.js";
     import PixabayImageSearch from "./PixabayImageSearch.svelte";
 
     // Exported props
@@ -113,12 +114,13 @@
                 throw new Error("Failed to upload image");
             }
 
-            // Create a food ID (will be overwritten by the saved ID if Firebase is used)
-            const tempId = `custom_${Date.now()}`;
+            // Generate a food ID based on the name
+            const foodId = generateFoodId(foodName.trim());
+            console.log(`Generated food ID: ${foodId} for "${foodName}"`);
             
             // Create the food item
             const newFood = {
-                id: tempId,
+                id: foodId,
                 name: foodName.trim(),
                 category: currentCategory,
                 image: imageUrl,
@@ -129,7 +131,8 @@
             const savedId = await saveFoodItem(newFood);
             
             // Update the ID if Firebase returned one
-            if (savedId) {
+            if (savedId && savedId !== foodId) {
+                console.log(`Firebase changed ID from ${foodId} to ${savedId}`);
                 newFood.id = savedId;
             }
             
