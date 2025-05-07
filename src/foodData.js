@@ -1,95 +1,15 @@
-export const foodDefaults = {
-    'chicken': {amount: '150g', lastUsed: '2 days ago'},
-    'salad': {amount: '100g', lastUsed: 'yesterday'},
-    'pizza': {amount: '1 slice', lastUsed: '3 days ago'},
-    'banana': {amount: '1 piece', lastUsed: 'today'},
-    'apple': {amount: '1 medium', lastUsed: 'yesterday'},
-    'rice': {amount: '200g', lastUsed: 'today'},
-    'steak': {amount: '200g', lastUsed: '4 days ago'},
-    'fish': {amount: '150g', lastUsed: '5 days ago'},
-    'egg': {amount: '2 pieces', lastUsed: 'yesterday'},
-    'tofu': {amount: '100g', lastUsed: '2 days ago'},
-    'beans': {amount: '150g', lastUsed: '3 days ago'},
-    'orange': {amount: '1 medium', lastUsed: 'yesterday'},
-    'grapes': {amount: '15 pieces', lastUsed: '2 days ago'},
-    'strawberry': {amount: '10 pieces', lastUsed: '4 days ago'},
-    'watermelon': {amount: '200g', lastUsed: 'yesterday'},
-    'broccoli': {amount: '100g', lastUsed: '2 days ago'},
-    'carrot': {amount: '1 medium', lastUsed: 'yesterday'},
-    'tomato': {amount: '1 medium', lastUsed: 'today'},
-    'potato': {amount: '1 large', lastUsed: '3 days ago'},
-    'corn': {amount: '100g', lastUsed: '4 days ago'},
-    'bread': {amount: '2 slices', lastUsed: 'today'},
-    'noodles': {amount: '150g', lastUsed: '2 days ago'},
-    'sandwich': {amount: '1 piece', lastUsed: 'yesterday'},
-    'burrito': {amount: '1 piece', lastUsed: '4 days ago'},
-    'pasta': {amount: '150g', lastUsed: '2 days ago'},
-    'burger': {amount: '1 piece', lastUsed: '5 days ago'},
-    'fries': {amount: '100g', lastUsed: '3 days ago'},
-    'donut': {amount: '1 piece', lastUsed: '6 days ago'},
-    'cake': {amount: '1 slice', lastUsed: '4 days ago'},
-    'icecream': {amount: '100g', lastUsed: '3 days ago'},
-    'fried_shrimp': {amount: '8 pieces', lastUsed: 'today'},
-    'shrimp': {amount: '10 pieces', lastUsed: 'yesterday'},
-    'salmon': {amount: '150g', lastUsed: '2 days ago'},
-    'crab': {amount: '200g', lastUsed: '1 week ago'},
-    'lobster': {amount: '1 piece', lastUsed: '2 weeks ago'},
-    'oyster': {amount: '6 pieces', lastUsed: '3 days ago'},
-    'squid': {amount: '100g', lastUsed: '1 week ago'}
-};
+// Export an empty foodDefaults object - all defaults will come from user input
+export const foodDefaults = {};
 
-// Function to get initial food data
+// Function to get initial food data with empty categories
 export function getFoodData() {
     return {
-        fruit: [
-            { id: 'apple', name: 'Apple', emoji: '🍎' },
-            { id: 'banana', name: 'Banana', emoji: '🍌' },
-            { id: 'orange', name: 'Orange', emoji: '🍊' },
-            { id: 'grapes', name: 'Grapes', emoji: '🍇' },
-            { id: 'watermelon', name: 'Watermelon', emoji: '🍉' },
-            { id: 'strawberry', name: 'Strawberry', emoji: '🍓' },
-            { id: 'blueberry', name: 'Blueberry', emoji: '🫐' },
-        ],
-        vegetables: [
-            { id: 'tomato', name: 'Tomato', emoji: '🍅' },
-            { id: 'carrot', name: 'Carrot', emoji: '🥕' },
-            { id: 'broccoli', name: 'Broccoli', emoji: '🥦' },
-            { id: 'cucumber', name: 'Cucumber', emoji: '🥒' },
-            { id: 'corn', name: 'Corn', emoji: '🌽' },
-            { id: 'potato', name: 'Potato', emoji: '🥔' },
-        ],
-        proteins: [
-            { id: 'chicken', name: 'Chicken', emoji: '🍗' },
-            { id: 'beef', name: 'Beef', emoji: '🥩' },
-            { id: 'fish', name: 'Fish', emoji: '🐟' },
-            { id: 'egg', name: 'Egg', emoji: '🥚' },
-            { id: 'tofu', name: 'Tofu', emoji: '🧊' },
-            { id: 'beans', name: 'Beans', emoji: '🫘' },
-        ],
-        grains: [
-            { id: 'rice', name: 'Rice', emoji: '🍚' },
-            { id: 'bread', name: 'Bread', emoji: '🍞' },
-            { id: 'pasta', name: 'Pasta', emoji: '🍝' },
-            { id: 'oats', name: 'Oats', emoji: '🥣' },
-        ],
-        dairy: [
-            { id: 'milk', name: 'Milk', emoji: '🥛' },
-            { id: 'cheese', name: 'Cheese', emoji: '🧀' },
-            { id: 'yogurt', name: 'Yogurt', emoji: '🥣' },
-        ],
-        snacks: [
-            { id: 'chips', name: 'Chips', emoji: '🍟' },
-            { id: 'cookie', name: 'Cookie', emoji: '🍪' },
-            { id: 'chocolate', name: 'Chocolate', emoji: '🍫' },
-            { id: 'icecream', name: 'Ice Cream', emoji: '🍦' },
-        ],
-        drinks: [
-            { id: 'water', name: 'Water', emoji: '💧' },
-            { id: 'coffee', name: 'Coffee', emoji: '☕' },
-            { id: 'tea', name: 'Tea', emoji: '🍵' },
-            { id: 'soda', name: 'Soda', emoji: '🥤' },
-            { id: 'juice', name: 'Juice', emoji: '🧃' },
-        ],
-        // The custom category has been removed
+        fruit: [],
+        vegetables: [],
+        proteins: [],
+        grains: [],
+        dairy: [],
+        snacks: [],
+        drinks: [],
     };
 }

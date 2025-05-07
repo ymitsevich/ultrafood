@@ -393,6 +393,20 @@
                 // Remove the item
                 foodData[category].splice(indexToRemove, 1);
                 
+                // If the category is now empty, remove it
+                if (foodData[category].length === 0) {
+                    delete foodData[category];
+                    
+                    // If we removed the current category, switch to another one
+                    if (category === currentCategory) {
+                        // Find first non-empty category, or default to the first one
+                        const remainingCategories = Object.keys(foodData);
+                        if (remainingCategories.length > 0) {
+                            currentCategory = remainingCategories[0];
+                        }
+                    }
+                }
+                
                 // Update foodData to trigger reactivity
                 foodData = { ...foodData };
                 break;
@@ -479,7 +493,7 @@
         
         <!-- Categories -->
         <div class="categories">
-            {#each Object.keys(foodData) as category}
+            {#each Object.entries(foodData).filter(([_, items]) => items.length > 0) as [category, _]}
                 <button
                     class="category-btn {currentCategory === category ? 'active' : ''}"
                     on:click={() => currentCategory = category}
