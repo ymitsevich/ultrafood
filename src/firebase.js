@@ -554,6 +554,70 @@ export async function updateSubmittedMealsWithFoodItem(foodId, updatedFood) {
 }
 
 /**
+ * Update a submitted meal
+ * @param {Object} meal - The meal data to update
+ * @returns {Promise<string>} - Promise that resolves with the meal ID
+ */
+export async function updateSubmittedMeal(meal) {
+    if (!meal || !meal.id) {
+        throw new Error("Invalid meal data: Missing ID");
+    }
+    
+    // Check if Firebase is available
+    if (!isFirebaseAvailable()) {
+        throw new Error("Firebase is not available");
+    }
+
+    try {
+        // Fixed collection name to match "submitted-meals" used in saveSubmittedMeal
+        const mealRef = doc(db, "submitted-meals", meal.id);
+        
+        // Update the meal in Firestore
+        await updateDoc(mealRef, {
+            items: meal.items,
+            // We don't update the timestamp to preserve when it was originally created
+            lastUpdated: new Date().toISOString()
+        });
+        
+        console.log(`Updated submitted meal [${meal.id}]`);
+        return meal.id;
+    } catch (error) {
+        console.error("Error updating submitted meal:", error);
+        throw error;
+    }
+}
+
+/**
+ * Delete a submitted meal
+ * @param {string} mealId - The ID of the meal to delete
+ * @returns {Promise<boolean>} - Promise that resolves with true if the meal was deleted
+ */
+export async function deleteSubmittedMeal(mealId) {
+    if (!mealId) {
+        throw new Error("Invalid meal ID");
+    }
+    
+    // Check if Firebase is available
+    if (!isFirebaseAvailable()) {
+        throw new Error("Firebase is not available");
+    }
+
+    try {
+        // Fixed collection name to match "submitted-meals" used in saveSubmittedMeal
+        const mealRef = doc(db, "submitted-meals", mealId);
+        
+        // Delete the meal from Firestore
+        await deleteDoc(mealRef);
+        
+        console.log(`Deleted submitted meal [${mealId}]`);
+        return true;
+    } catch (error) {
+        console.error("Error deleting submitted meal:", error);
+        throw error;
+    }
+}
+
+/**
  * Check if Firebase is connected and available
  * @returns {boolean} - Whether Firebase is available
  */
