@@ -596,18 +596,16 @@
                 {:else}
                     <div class="submitted-meals-list">
                         {#each submittedMeals as meal (meal.id)}
-                            <div 
-                                class="meal-card"
-                                on:mousedown={(e) => handleMealCardPress(e, meal)}
-                                on:mouseup={handleMealCardRelease}
-                                on:mouseleave={handleMealCardRelease}
-                                on:touchstart={(e) => handleMealCardPress(e, meal)}
-                                on:touchend={handleMealCardRelease}
-                                on:touchcancel={handleMealCardRelease}
-                                on:contextmenu={(e) => handleMealCardContextMenu(e, meal)}
-                            >
+                            <div class="meal-card">
                                 <div class="meal-header">
                                     <div class="meal-timestamp">{formatDate(meal.timestamp)}</div>
+                                    <button 
+                                        class="edit-meal-button" 
+                                        on:click|stopPropagation={() => openEditMealModal(meal)}
+                                        aria-label="Edit meal"
+                                    >
+                                        ✏️
+                                    </button>
                                 </div>
                                 <div class="meal-items">
                                     {#each meal.items as item}
@@ -958,31 +956,10 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         transition: transform 0.2s;
         position: relative;
-        cursor: pointer;
     }
     
     .meal-card:hover {
         transform: translateY(-3px);
-    }
-    
-    /* Edit hint tooltip */
-    .meal-card:after {
-        content: "Long-press to edit";
-        position: absolute;
-        right: 10px;
-        bottom: 10px;
-        background-color: rgba(0,0,0,0.6);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        opacity: 0;
-        transition: opacity 0.3s;
-        pointer-events: none;
-    }
-    
-    .meal-card:hover:after {
-        opacity: 1;
     }
     
     .meal-header {
@@ -996,6 +973,22 @@
     .meal-timestamp {
         font-weight: bold;
         color: #555;
+    }
+    
+    .edit-meal-button {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        color: #555;
+        transition: color 0.2s;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+    
+    .edit-meal-button:hover {
+        color: #C26C51FF;
+        background-color: rgba(0,0,0,0.05);
     }
     
     .meal-items {
