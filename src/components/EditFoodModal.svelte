@@ -130,7 +130,7 @@
         }
     }
     
-    // Resize and compress an image file
+    // Resize, crop to square, and compress an image file
     async function resizeAndCompressImage(file) {
         return new Promise((resolve, reject) => {
             // Create an image to get dimensions
@@ -141,37 +141,51 @@
                 // Clean up object URL
                 URL.revokeObjectURL(objectUrl);
                 
-                // Calculate new dimensions
-                const MAX_WIDTH = 500; // Maximum width of 500px
-                const MAX_HEIGHT = 500; // Maximum height of 500px
-                let width = img.width;
-                let height = img.height;
+                // Size configuration
+                const TARGET_SIZE = 500; // Target size for the square image
+                const FINAL_SIZE = 500;  // Final output size
                 
-                // Resize if larger than max dimensions while maintaining aspect ratio
-                if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-                    if (width > height) {
-                        height = Math.round(height * (MAX_WIDTH / width));
-                        width = MAX_WIDTH;
-                    } else {
-                        width = Math.round(width * (MAX_HEIGHT / height));
-                        height = MAX_HEIGHT;
-                    }
+                // Calculate dimensions for cropping to a square
+                let sourceX, sourceY, sourceSize;
+                
+                if (img.width > img.height) {
+                    // Landscape image - crop from center width
+                    sourceSize = img.height;
+                    sourceX = Math.floor((img.width - sourceSize) / 2);
+                    sourceY = 0;
+                } else {
+                    // Portrait image - crop from center height
+                    sourceSize = img.width;
+                    sourceX = 0;
+                    sourceY = Math.floor((img.height - sourceSize) / 2);
                 }
                 
-                // Create canvas for resizing
+                // Create canvas for cropping and resizing
                 const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
+                canvas.width = FINAL_SIZE;
+                canvas.height = FINAL_SIZE;
                 
-                // Draw resized image on canvas
+                // Draw the cropped and resized image on canvas
                 const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Apply some basic anti-aliasing by setting the smoothing quality
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                
+                // Draw the image with cropping and resizing
+                ctx.drawImage(
+                    img,
+                    sourceX, sourceY,       // Source position (x, y) - where to start cropping
+                    sourceSize, sourceSize, // Source dimensions - the square to crop
+                    0, 0,                   // Destination position (always 0,0)
+                    FINAL_SIZE, FINAL_SIZE  // Destination size - our final square size
+                );
                 
                 // Convert to blob with compression
                 canvas.toBlob(
                     (blob) => {
                         if (blob) {
-                            console.log(`Image optimized: ${Math.round(blob.size / 1024)}KB (${width}x${height}px)`);
+                            console.log(`Image optimized: ${Math.round(blob.size / 1024)}KB (${FINAL_SIZE}x${FINAL_SIZE}px, square)`);
                             resolve(blob);
                         } else {
                             reject(new Error("Failed to compress image"));
