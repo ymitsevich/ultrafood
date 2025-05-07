@@ -97,18 +97,28 @@
         console.log("Selected Pixabay image:", image);
     }
 
-    // Handle image file selection
+    // Handle image file selection with resizing and compression
     async function handleImageSelect(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         try {
-            imageBlob = file;
-            
-            // Create a preview
+            // Create a preview of the original image first
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
+                // Show original image while processing
                 imageData = e.target.result;
+                
+                // Process the image (resize and compress)
+                const processedBlob = await resizeAndCompressImage(file);
+                imageBlob = processedBlob;
+                
+                // Update the preview with the processed image
+                const processedReader = new FileReader();
+                processedReader.onload = (pe) => {
+                    imageData = pe.target.result;
+                };
+                processedReader.readAsDataURL(processedBlob);
             };
             reader.readAsDataURL(file);
             
@@ -118,6 +128,67 @@
             console.error("Error processing image:", error);
             uploadError = "Failed to process the image";
         }
+    }
+    
+    // Resize and compress an image file
+    async function resizeAndCompressImage(file) {
+        return new Promise((resolve, reject) => {
+            // Create an image to get dimensions
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
+            
+            img.onload = () => {
+                // Clean up object URL
+                URL.revokeObjectURL(objectUrl);
+                
+                // Calculate new dimensions
+                const MAX_WIDTH = 500; // Maximum width of 500px
+                const MAX_HEIGHT = 500; // Maximum height of 500px
+                let width = img.width;
+                let height = img.height;
+                
+                // Resize if larger than max dimensions while maintaining aspect ratio
+                if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+                    if (width > height) {
+                        height = Math.round(height * (MAX_WIDTH / width));
+                        width = MAX_WIDTH;
+                    } else {
+                        width = Math.round(width * (MAX_HEIGHT / height));
+                        height = MAX_HEIGHT;
+                    }
+                }
+                
+                // Create canvas for resizing
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Draw resized image on canvas
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convert to blob with compression
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob) {
+                            console.log(`Image optimized: ${Math.round(blob.size / 1024)}KB (${width}x${height}px)`);
+                            resolve(blob);
+                        } else {
+                            reject(new Error("Failed to compress image"));
+                        }
+                    },
+                    'image/jpeg', // Convert to JPEG format for better compression
+                    0.85 // Quality: 0.85 offers good balance between quality and file size
+                );
+            };
+            
+            img.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error('Failed to load image'));
+            };
+            
+            img.src = objectUrl;
+        });
     }
 
     // Handle form submission
