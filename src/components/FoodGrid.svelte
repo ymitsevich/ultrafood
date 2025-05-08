@@ -10,6 +10,7 @@
     export let onConfigClick;
     export let onAddNewFood;
     export let onEditFood; // New prop for opening the edit modal
+    export let isVirtualCategory = false; // New prop to identify virtual categories like "Recent"
     
     // Track loading state of images
     let loadingImages = {};
@@ -28,7 +29,26 @@
                 loadingImages[item.id] = true;
             }
         });
+        
+        // Pre-load images to avoid loading indicator flashes for cached images
+        preloadImages();
     });
+    
+    // Preload images to check if they are already cached
+    function preloadImages() {
+        foodItems.forEach(item => {
+            if (item.imageUrl || item.image) {
+                const imgSrc = item.imageUrl || item.image;
+                const img = new Image();
+                img.onload = () => imageLoaded(item.id);
+                img.src = imgSrc;
+            } else if (item.imageData) {
+                const img = new Image();
+                img.onload = () => imageLoaded(item.id);
+                img.src = item.imageData;
+            }
+        });
+    }
     
     // Handle image load complete
     function imageLoaded(foodId) {
@@ -148,7 +168,6 @@
                                 class="food-image" 
                                 style="background-image: url('{food.imageUrl || food.image}')" 
                                 class:hidden={loadingImages[food.id]}
-                                on:load={() => imageLoaded(food.id)}
                             ></div>
                         {:else if food.imageData}
                             {#if loadingImages[food.id]}
@@ -158,7 +177,6 @@
                                 class="food-image" 
                                 style="background-image: url('{food.imageData}')" 
                                 class:hidden={loadingImages[food.id]}
-                                on:load={() => imageLoaded(food.id)}
                             ></div>
                         {:else}
                             <div class="food-emoji">{food.emoji}</div>
@@ -180,15 +198,17 @@
             </div>
         {/each}
         
-        <!-- Add New Food Button -->
-        <div class="food-item add-new-food">
-            <button class="food-btn add-food-btn" on:click={onAddNewFood}>
-                <div class="add-icon-wrapper">
-                    <span class="add-icon">+</span>
-                </div>
-                <div class="food-name">Add New</div>
-            </button>
-        </div>
+        <!-- Add New Food Button - Only show for regular categories -->
+        {#if !isVirtualCategory}
+            <div class="food-item add-new-food">
+                <button class="food-btn add-food-btn" on:click={onAddNewFood}>
+                    <div class="add-icon-wrapper">
+                        <span class="add-icon">+</span>
+                    </div>
+                    <div class="food-name">Add New</div>
+                </button>
+            </div>
+        {/if}
     </div>
 </div>
 

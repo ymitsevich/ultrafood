@@ -24,7 +24,14 @@
     
     // Food data and category state
     let foodData = getFoodData();
-    let currentCategory = Object.keys(foodData)[0] || '';
+    
+    // Recent foods special virtual category
+    const RECENT_CATEGORY = "recent";
+    let recentFoods = []; // Will store recent foods
+    const MAX_RECENT_ITEMS = 20; // Maximum number of recent items to display
+    
+    // Set recent as default category
+    let currentCategory = RECENT_CATEGORY;
     let isLoading = true;
     let loadError = null;
     let usingLocalData = false;
@@ -99,8 +106,9 @@
                     usingLocalData = true;
                 }
                 
-                // Load submitted meals
-                loadSubmittedMeals();
+                // Load submitted meals and update recent foods
+                await loadSubmittedMeals();
+                updateRecentFoods();
             }
         } catch (error) {
             console.error('Error loading food items from Firebase:', error);
@@ -139,12 +147,37 @@
             hasNextPage = result.hasNextPage;
             
             console.log(`Loaded page ${currentPage} of meals: ${result.meals.length} items`);
+            
+            // Update recent foods when meals are loaded
+            updateRecentFoods();
         } catch (error) {
             console.error('Error loading submitted meals:', error);
             mealLoadError = 'Failed to load submitted meals.';
         } finally {
             isLoadingMeals = false;
         }
+    }
+    
+    // Extract and update recent foods from submitted meals
+    function updateRecentFoods() {
+        // Create a map to track unique foods by ID
+        const uniqueFoods = new Map();
+        
+        // Process each meal, most recent first
+        submittedMeals.forEach(meal => {
+            if (meal.items && Array.isArray(meal.items)) {
+                meal.items.forEach(item => {
+                    // Only add if not already in the map (keeps most recent instance)
+                    if (!uniqueFoods.has(item.id) && item.id && item.name) {
+                        uniqueFoods.set(item.id, { ...item });
+                    }
+                });
+            }
+        });
+        
+        // Convert map to array and limit to MAX_RECENT_ITEMS
+        recentFoods = Array.from(uniqueFoods.values()).slice(0, MAX_RECENT_ITEMS);
+        console.log(`Updated recent foods: ${recentFoods.length} items`);
     }
     
     // Load next page of meals
@@ -493,7 +526,16 @@
         
         <!-- Categories -->
         <div class="categories">
-            {#each Object.entries(foodData).filter(([_, items]) => items.length > 0) as [category, _]}
+            <!-- Always show Recent category first -->
+            <button
+                class="category-btn {currentCategory === RECENT_CATEGORY ? 'active' : ''}"
+                on:click={() => currentCategory = RECENT_CATEGORY}
+            >
+                Recent
+            </button>
+            
+            <!-- Show all regular categories with items -->
+            {#each Object.entries(foodData).filter(([cat, items]) => items.length > 0 && cat !== RECENT_CATEGORY) as [category, _]}
                 <button
                     class="category-btn {currentCategory === category ? 'active' : ''}"
                     on:click={() => currentCategory = category}
@@ -527,13 +569,14 @@
                 <p>Loading your food items...</p>
             </div>
         {:else}
-            <!-- Food Grid Component -->
+            <!-- Food Grid Component - Handle Recent Virtual Category Separately -->
             <FoodGrid 
-                category={currentCategory} 
-                foodItems={foodData[currentCategory] || []} 
+                category={currentCategory}
+                foodItems={currentCategory === RECENT_CATEGORY ? recentFoods : (foodData[currentCategory] || [])}
                 onConfigClick={openAmountModal}
                 onAddNewFood={openAddFoodModal}
                 onEditFood={openEditFoodModal}
+                isVirtualCategory={currentCategory === RECENT_CATEGORY}
             />
             
             <!-- Show status message if error occurred -->
@@ -555,7 +598,7 @@
     />
     <AddFoodModal 
         bind:showModal={showAddFoodModal} 
-        currentCategory={currentCategory}
+        currentCategory={currentCategory === RECENT_CATEGORY ? Object.keys(foodData)[0] || '' : currentCategory}
         onAddFood={handleAddNewFood} 
     />
     <!-- Edit Food Modal -->
@@ -564,7 +607,7 @@
         foodItem={editingFood}
         onSave={handleSaveEditedFood}
         onDelete={handleDeleteFood}
-        categories={Object.keys(foodData)}
+        categories={Object.keys(foodData).filter(cat => cat !== RECENT_CATEGORY)}
     />
     <!-- Edit Meal Modal -->
     <EditMealModal 
@@ -596,7 +639,15 @@
                 {:else}
                     <div class="submitted-meals-list">
                         {#each submittedMeals as meal (meal.id)}
-                            <div class="meal-card">
+                            <div class="meal-card"
+                                on:mousedown={e => handleMealCardPress(e, meal)}
+                                on:mouseup={handleMealCardRelease}
+                                on:mouseleave={handleMealCardRelease}
+                                on:touchstart={e => handleMealCardPress(e, meal)}
+                                on:touchend={handleMealCardRelease}
+                                on:touchcancel={handleMealCardRelease}
+                                on:contextmenu={e => handleMealCardContextMenu(e, meal)}
+                            >
                                 <div class="meal-header">
                                     <div class="meal-timestamp">{formatDate(meal.timestamp)}</div>
                                     <button 
@@ -639,218 +690,155 @@
                     
                     <div class="pagination-controls">
                         {#if hasNextPage}
-                            <button class="pagination-button load-more-button" on:click={loadMoreMeals} disabled={isLoadingMeals}>
-                                {#if isLoadingMeals}
-                                    Loading...
-                                {:else}
-                                    Load More Meals
-                                {/if}
+                            <button class="load-more-button" on:click={loadMoreMeals} disabled={isLoadingMeals}>
+                                {isLoadingMeals ? 'Loading...' : 'Load More'}
                             </button>
-                        {:else}
-                            <div class="end-of-results">
-                                {submittedMeals.length > 0 ? 'No more meals to load' : ''}
-                            </div>
                         {/if}
                     </div>
                 {/if}
             </div>
         </div>
     {/if}
-
+    
     <!-- Add Category Modal -->
     {#if showAddCategoryModal}
-        <div class="modal" on:click|self={() => showAddCategoryModal = false}>
-            <div class="modal-content add-category-modal" on:click|stopPropagation>
+        <div class="modal">
+            <div class="modal-content add-category-modal">
                 <span class="close-modal" on:click={() => showAddCategoryModal = false}>&times;</span>
                 <h2>Add New Category</h2>
                 
                 <div class="form-group">
-                    <label for="category-name">Category Name:</label>
+                    <label for="category-name">Category Name</label>
                     <input 
                         type="text" 
                         id="category-name" 
-                        placeholder="Enter category name..." 
-                        bind:value={newCategoryName}
-                        on:keypress={(e) => e.key === 'Enter' && addNewCategory()}
-                        autofocus
-                    />
+                        bind:value={newCategoryName} 
+                        placeholder="Enter category name"
+                    >
                 </div>
                 
-                <button 
-                    class="add-category-submit-btn" 
-                    on:click={addNewCategory} 
-                    disabled={!newCategoryName.trim()}
-                >
-                    Add Category
-                </button>
+                <div class="form-actions">
+                    <button class="cancel-btn" on:click={() => showAddCategoryModal = false}>Cancel</button>
+                    <button class="save-btn" on:click={addNewCategory} disabled={!newCategoryName.trim()}>
+                        Add Category
+                    </button>
+                </div>
             </div>
         </div>
     {/if}
 </div>
 
 <style>
+    /* Main container */
     .meal-logger {
         display: flex;
         height: 100vh;
         overflow: hidden;
-        gap: 15px; /* Add consistent gap */
     }
     
-    .main-content {
-        flex: 1;
-        padding: 15px 20px 20px;
-        overflow-y: auto;
-        position: relative;
-        margin-left: 0; /* Reset margin since we're using gap */
-        width: auto; /* Let flex handle the width */
-    }
-    
-    .categories {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 0px; /* Reduced from 2px to 0px */
-        margin-bottom: 20px;
-        overflow-x: auto;
-        padding-bottom: 10px; /* Add padding to show scrollbar clearly */
-        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-        scrollbar-width: thin; /* For Firefox */
-        white-space: nowrap;
-    }
-    
-    /* Style the scrollbar for webkit browsers */
-    .categories::-webkit-scrollbar {
-        height: 4px;
-    }
-    
-    .categories::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
-    
-    .categories::-webkit-scrollbar-thumb {
-        background: #C26C51FF;
-        border-radius: 10px;
-    }
-    
-    .category-btn {
-        padding: 4px 8px; /* Further reduced padding from 6px 10px */
-        background: #f0f0f0;
-        border: 1px solid #ddd;
-        border-radius: 20px;
-        cursor: pointer;
-        font-size: 16px;
-        transition: all 0.2s;
-        flex-shrink: 0; /* Prevent button from shrinking */
-        margin-right: 1px; /* Add minimal margin instead of gap */
-    }
-    
-    .category-btn.active {
-        background-color: #C26C51FF;
-        color: white;
-        border-color: #C26C51FF;
-    }
-    
-    .category-btn:hover:not(.active) {
-        background-color: #e0e0e0;
-    }
-    
-    /* Add category button specific styles */
-    .add-category-btn {
-        font-size: 18px;
-        font-weight: bold;
-        padding: 2px 10px;
-        width: calc(2em + 20px); /* Make button 2x wider than default */
-        background-color: #f8f8f8;
-        border: 1px dashed #ccc;
-    }
-    
-    .add-category-btn:hover {
-        background-color: #e6e6e6;
-        border-color: #C26C51FF;
-    }
-    
-    /* Add category modal specific styles */
-    .add-category-modal {
-        max-width: 400px;
-        padding: 25px;
-    }
-    
-    .add-category-submit-btn {
-        background-color: #C26C51FF;
-        color: white;
-        padding: 12px 20px;
-        border: none;
-        border-radius: 12px;
-        font-size: 16px;
-        cursor: pointer;
-        transition: background-color 0.3s;
-        display: block;
-        width: 100%;
-        margin-top: 20px;
-    }
-    
-    .add-category-submit-btn:hover:not([disabled]) {
-        background-color: #b05a42;
-    }
-    
-    .add-category-submit-btn[disabled] {
-        background-color: #e0bfb5;
-        cursor: not-allowed;
-    }
-    
-    .form-group {
-        margin-bottom: 20px;
-    }
-    
-    .form-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-    }
-    
-    .form-group input {
-        width: 100%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-size: 16px;
-    }
-    
-    .loading-state {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 200px;
-        font-size: 18px;
-    }
-    
+    /* Local mode banner */
     .local-mode-banner {
-        background-color: #fff3cd;
-        color: #856404;
-        border: 1px solid #ffeeba;
-        border-radius: 4px;
-        padding: 10px 16px;
-        margin: 10px 0;
+        background-color: #fff3e0;
+        color: #e65100;
+        padding: 10px 15px;
+        margin: 10px;
+        border-radius: 8px;
+        border: 1px solid #ffcc80;
         font-size: 14px;
-        width: 100%;
     }
     
     .local-mode-banner .hint {
         font-size: 12px;
-        opacity: 0.8;
+        display: block;
+        margin-top: 3px;
+        color: #bf360c;
     }
     
+    /* Categories */
+    .categories {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 10px;
+        background-color: #f8f8f8;
+        border-bottom: 1px solid #e0e0e0;
+        gap: 8px;
+    }
+    
+    .category-btn {
+        padding: 8px 16px;
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 20px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+    
+    .category-btn:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .category-btn.active {
+        background-color: #C26C51;
+        color: white;
+        border-color: #C26C51;
+    }
+    
+    .add-category-btn {
+        font-weight: bold;
+        font-size: 16px;
+        padding: 8px 14px;
+        color: #7E7E7E;
+    }
+    
+    /* Submitted foods button */
+    .submitted-foods-button {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: white;
+        border: 1px solid #ddd;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.2s;
+    }
+    
+    .submitted-foods-button:hover {
+        background-color: #f5f5f5;
+        transform: scale(1.05);
+    }
+    
+    /* Loading state */
+    .loading-state {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 300px;
+        color: #888;
+    }
+    
+    /* Status messages */
     .status-message {
         position: fixed;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        padding: 10px 16px;
+        padding: 10px 20px;
         border-radius: 8px;
         font-size: 14px;
-        z-index: 100;
-        opacity: 0.9;
-        animation: fadeOut 5s forwards;
+        z-index: 5;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
     
     .status-message.info {
@@ -865,130 +853,138 @@
         border: 1px solid #ffcdd2;
     }
     
-    @keyframes fadeOut {
-        0% { opacity: 0.9; }
-        70% { opacity: 0.9; }
-        100% { opacity: 0; visibility: hidden; }
-    }
-    
-    /* Submitted Foods Button */
-    .submitted-foods-button {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #C26C51FF;
-        color: white;
-        border: none;
-        font-size: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        z-index: 10;
-        transition: transform 0.2s, background-color 0.2s;
-    }
-    
-    .submitted-foods-button:hover {
-        background-color: #a35a42;
-        transform: scale(1.05);
-    }
-    
-    /* Modal Styles */
+    /* Modal */
     .modal {
         position: fixed;
         top: 0;
         left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
         display: flex;
-        align-items: center;
         justify-content: center;
+        align-items: center;
         z-index: 1000;
     }
     
     .modal-content {
-        background-color: white;
-        width: 90%;
-        max-width: 800px;
-        border-radius: 20px;
-        padding: 30px;
-        position: relative;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-        max-height: 90vh;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        max-width: 90%;
+        max-height: 90%;
         overflow-y: auto;
+        position: relative;
     }
     
     .close-modal {
         position: absolute;
-        top: 20px;
-        right: 20px;
-        font-size: 32px;
+        top: 10px;
+        right: 15px;
+        font-size: 24px;
         cursor: pointer;
-        color: #666;
+        color: #999;
     }
     
     .close-modal:hover {
         color: #333;
     }
     
-    h2 {
-        margin-bottom: 25px;
-        font-size: 28px;
-        text-align: center;
+    /* Add Category Modal */
+    .add-category-modal {
+        width: 400px;
+        max-width: 90vw;
     }
     
-    /* Submitted Meals Styles */
-    .submitted-meals-list {
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+    
+    .form-group input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 16px;
+    }
+    
+    .form-actions {
         display: flex;
-        flex-direction: column;
-        gap: 20px;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    
+    .cancel-btn, .save-btn {
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .cancel-btn {
+        background-color: #f5f5f5;
+    }
+    
+    .save-btn {
+        background-color: #C26C51;
+        color: white;
+    }
+    
+    .save-btn:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+    
+    /* Submitted Meals Modal */
+    .submitted-meals-modal {
+        width: 600px;
+        max-width: 90vw;
+        max-height: 80vh;
+    }
+    
+    .submitted-meals-list {
+        max-height: 60vh;
+        overflow-y: auto;
+        padding: 10px 0;
     }
     
     .meal-card {
-        background-color: #f9f9f9;
-        border-radius: 12px;
+        border: 1px solid #eee;
+        border-radius: 10px;
         padding: 15px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        transition: transform 0.2s;
+        margin-bottom: 15px;
+        background-color: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         position: relative;
-    }
-    
-    .meal-card:hover {
-        transform: translateY(-3px);
     }
     
     .meal-header {
         display: flex;
         justify-content: space-between;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #eee;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f0f0f0;
     }
     
     .meal-timestamp {
-        font-weight: bold;
+        font-weight: 500;
         color: #555;
+        font-size: 14px;
     }
     
     .edit-meal-button {
         background: none;
         border: none;
-        font-size: 18px;
+        font-size: 16px;
         cursor: pointer;
-        color: #555;
-        transition: color 0.2s;
-        padding: 4px 8px;
-        border-radius: 4px;
-    }
-    
-    .edit-meal-button:hover {
-        color: #C26C51FF;
-        background-color: rgba(0,0,0,0.05);
+        padding: 0 5px;
     }
     
     .meal-items {
@@ -1000,128 +996,106 @@
     .meal-item {
         display: flex;
         align-items: center;
-        background: white;
+        width: calc(50% - 10px);
+        border: 1px solid #f0f0f0;
         border-radius: 8px;
         padding: 8px;
-        width: calc(50% - 5px);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    
-    @media (max-width: 600px) {
-        .meal-item {
-            width: 100%;
-        }
+        background-color: #fafafa;
     }
     
     .meal-item-visual {
-        width: 36px;
-        height: 36px;
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        margin-right: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-right: 8px;
-        overflow: hidden;
-        border-radius: 4px;
-    }
-    
-    .meal-item-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
     }
     
     .meal-item-emoji {
-        font-size: 22px;
+        font-size: 24px;
+    }
+    
+    .meal-item-image {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 5px;
     }
     
     .meal-item-details {
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
     
     .meal-item-name {
         font-weight: 500;
-        font-size: 14px;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .meal-item-amount {
         font-size: 12px;
-        color: #666;
+        color: #777;
     }
     
-    .no-meals-message {
+    .no-meals-message, .error-message, .loading-meals, .loading-more {
         text-align: center;
-        padding: 40px 20px;
-        color: #666;
-    }
-    
-    .loading-meals {
-        text-align: center;
-        padding: 40px;
+        padding: 20px;
+        color: #777;
     }
     
     .error-message {
-        text-align: center;
-        padding: 20px;
-        color: #e74c3c;
-    }
-    
-    /* Pagination Controls - updated for "Load More" pattern */
-    .pagination-controls {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin-top: 20px;
-        padding-top: 15px;
-        border-top: 1px solid #eee;
-    }
-    
-    .load-more-button {
-        padding: 12px 20px;
-        background-color: #f0f0f0;
-        border: 1px solid #ddd;
-        border-radius: 20px;
-        cursor: pointer;
-        font-size: 16px;
-        transition: all 0.2s;
-        min-width: 180px;
-    }
-    
-    .load-more-button:hover:not([disabled]) {
-        background-color: #C26C51FF;
-        color: white;
-    }
-    
-    .load-more-button[disabled] {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    
-    .end-of-results {
-        font-size: 14px;
-        color: #999;
-        padding: 10px;
-    }
-    
-    .loading-more {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 15px;
-        color: #666;
-        gap: 10px;
+        color: #e53935;
     }
     
     .loading-spinner {
-        width: 20px;
-        height: 20px;
-        border: 3px solid rgba(0, 0, 0, 0.1);
+        width: 30px;
+        height: 30px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #C26C51;
         border-radius: 50%;
-        border-top-color: #C26C51FF;
-        animation: spin 1s ease-in-out infinite;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
     }
     
     @keyframes spin {
-        to { transform: rotate(360deg); }
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .pagination-controls {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    
+    .load-more-button {
+        background-color: #f0f0f0;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+    }
+    
+    .load-more-button:hover {
+        background-color: #e0e0e0;
+    }
+    
+    .load-more-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 600px) {
+        .meal-item {
+            width: 100%;
+        }
     }
 </style>
