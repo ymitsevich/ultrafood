@@ -3,6 +3,7 @@
     import { getFoodData } from './foodData.js';
     import { foodDefaults } from './stores/foodDefaults.js';
     import { basket } from './stores/basket.js';
+    import { language, t } from './stores/language.js';
     import { onMount } from 'svelte';
     import { 
         getFoodItems, 
@@ -20,7 +21,12 @@
     import TimeModal from './components/TimeModal.svelte';
     import AddFoodModal from './components/AddFoodModal.svelte';
     import EditFoodModal from './components/EditFoodModal.svelte';
-    import EditMealModal from './components/EditMealModal.svelte'; // Import the new EditMealModal component
+    import EditMealModal from './components/EditMealModal.svelte';
+    import LanguageModal from './components/LanguageModal.svelte';
+    import SlideUpMenu from './components/SlideUpMenu.svelte';
+    
+    // Menu state
+    let showMenu = false;
     
     // Food data and category state
     let foodData = getFoodData();
@@ -46,6 +52,23 @@
     let mealLoadError = null;
     const MEALS_PER_PAGE = 5; // Increased from 3 for better UX
     let showSubmittedMealsModal = false;
+    
+    // Language modal state
+    let showLanguageModal = false;
+    
+    // Menu items configuration
+    let menuItems = [
+        {
+            icon: '🌐',
+            label: () => $language === 'ru' ? 'Настройки языка' : 'Language Settings',
+            action: openLanguageModal
+        },
+        {
+            icon: '📋',
+            label: () => t('loggedMeals'),
+            action: openSubmittedMealsModal
+        }
+    ];
     
     // Pagination state for server-side pagination
     let lastVisibleMeal = null;
@@ -118,6 +141,16 @@
             isLoading = false;
         }
     });
+    
+    // Toggle menu
+    function toggleMenu() {
+        showMenu = !showMenu;
+    }
+    
+    // Handle language selector button click
+    function openLanguageModal() {
+        showLanguageModal = true;
+    }
     
     // Load submitted meals from Firebase with pagination
     async function loadSubmittedMeals(resetPagination = true) {
@@ -515,15 +548,6 @@
     />
 
     <div class="main-content">
-        <!-- View submitted foods button -->
-        <button 
-            class="submitted-foods-button"
-            on:click={openSubmittedMealsModal}
-            title="View Logged Meals"
-        >
-            📋
-        </button>
-        
         <!-- Categories -->
         <div class="categories">
             <!-- Always show Recent category first -->
@@ -531,7 +555,7 @@
                 class="category-btn {currentCategory === RECENT_CATEGORY ? 'active' : ''}"
                 on:click={() => currentCategory = RECENT_CATEGORY}
             >
-                Recent
+                {t('recent')}
             </button>
             
             <!-- Show all regular categories with items -->
@@ -547,7 +571,7 @@
             <button
                 class="category-btn add-category-btn"
                 on:click={() => showAddCategoryModal = true}
-                title="Add New Category"
+                title={t('addCategory')}
             >
                 +
             </button>
@@ -557,8 +581,8 @@
         {#if LOCAL_ONLY_MODE}
             <div class="local-mode-banner">
                 <p>
-                    <strong>Local Mode:</strong> Changes will not be saved to the cloud. 
-                    <span class="hint">To enable cloud storage: create a Firestore database and set LOCAL_ONLY_MODE=false in firebase.js</span>
+                    <strong>{t('localModeActive')}</strong>
+                    <span class="hint">{t('cloudStorageHint')}</span>
                 </p>
             </div>
         {/if}
@@ -566,7 +590,7 @@
         <!-- Loading state -->
         {#if isLoading}
             <div class="loading-state">
-                <p>Loading your food items...</p>
+                <p>{t('loading')}</p>
             </div>
         {:else}
             <!-- Food Grid Component - Handle Recent Virtual Category Separately -->
@@ -583,12 +607,30 @@
             {#if !LOCAL_ONLY_MODE && (usingLocalData || loadError)}
                 <div class="status-message {loadError ? 'error' : 'info'}">
                     <p>
-                        {loadError || 'Using local data - changes will not be saved to the cloud.'}
+                        {loadError || t('localModeActive')}
                     </p>
                 </div>
             {/if}
         {/if}
     </div>
+
+    <!-- Hamburger Menu Button (top right) -->
+    <button class="menu-button" on:click={toggleMenu} title={t('menu')}>
+        <div class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </button>
+    
+    <!-- Slide-up Menu -->
+    <SlideUpMenu 
+        bind:showMenu={showMenu} 
+        menuItems={menuItems.map(item => ({
+            ...item,
+            label: typeof item.label === 'function' ? item.label() : item.label
+        }))}
+    />
 
     <!-- Modals -->
     <AmountModal bind:showModal={showAmountModal} bind:selectedFood={selectedFood} />
@@ -616,25 +658,27 @@
         onSave={handleSaveEditedMeal}
         onDelete={handleDeleteMeal}
     />
+    <!-- Language Modal -->
+    <LanguageModal bind:showModal={showLanguageModal} />
     
     <!-- Submitted Meals Modal -->
     {#if showSubmittedMealsModal}
         <div class="modal">
             <div class="modal-content submitted-meals-modal">
                 <span class="close-modal" on:click={closeSubmittedMealsModal}>&times;</span>
-                <h2>Your Logged Meals</h2>
+                <h2>{t('loggedMeals')}</h2>
                 
                 {#if isLoadingMeals && submittedMeals.length === 0}
                     <div class="loading-meals">
-                        <p>Loading your logged meals...</p>
+                        <p>{t('loading')}</p>
                     </div>
                 {:else if mealLoadError && submittedMeals.length === 0}
                     <div class="error-message">
-                        <p>{mealLoadError}</p>
+                        <p>{t('errorLoadingMeals')}</p>
                     </div>
                 {:else if submittedMeals.length === 0}
                     <div class="no-meals-message">
-                        <p>You haven't logged any meals yet. Add items to your basket and submit them to log a meal.</p>
+                        <p>{t('noMeals')}</p>
                     </div>
                 {:else}
                     <div class="submitted-meals-list">
@@ -653,7 +697,7 @@
                                     <button 
                                         class="edit-meal-button" 
                                         on:click|stopPropagation={() => openEditMealModal(meal)}
-                                        aria-label="Edit meal"
+                                        aria-label={t('editMeal')}
                                     >
                                         ✏️
                                     </button>
@@ -683,7 +727,7 @@
                         {#if isLoadingMeals && submittedMeals.length > 0}
                             <div class="loading-more">
                                 <div class="loading-spinner"></div>
-                                <p>Loading more meals...</p>
+                                <p>{t('loading')}</p>
                             </div>
                         {/if}
                     </div>
@@ -691,7 +735,7 @@
                     <div class="pagination-controls">
                         {#if hasNextPage}
                             <button class="load-more-button" on:click={loadMoreMeals} disabled={isLoadingMeals}>
-                                {isLoadingMeals ? 'Loading...' : 'Load More'}
+                                {isLoadingMeals ? t('loading') : t('loadMore')}
                             </button>
                         {/if}
                     </div>
@@ -705,22 +749,22 @@
         <div class="modal">
             <div class="modal-content add-category-modal">
                 <span class="close-modal" on:click={() => showAddCategoryModal = false}>&times;</span>
-                <h2>Add New Category</h2>
+                <h2>{t('addCategory')}</h2>
                 
                 <div class="form-group">
-                    <label for="category-name">Category Name</label>
+                    <label for="category-name">{t('categoryName')}</label>
                     <input 
                         type="text" 
                         id="category-name" 
                         bind:value={newCategoryName} 
-                        placeholder="Enter category name"
+                        placeholder={t('enterCategoryName')}
                     >
                 </div>
                 
                 <div class="form-actions">
-                    <button class="cancel-btn" on:click={() => showAddCategoryModal = false}>Cancel</button>
+                    <button class="cancel-btn" on:click={() => showAddCategoryModal = false}>{t('cancel')}</button>
                     <button class="save-btn" on:click={addNewCategory} disabled={!newCategoryName.trim()}>
-                        Add Category
+                        {t('addCategory')}
                     </button>
                 </div>
             </div>
@@ -734,6 +778,64 @@
         display: flex;
         height: 100vh;
         overflow: hidden;
+        width: 100%;
+    }
+    
+    /* Main content area to properly contain the food grid */
+    .main-content {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        width: 100%;
+        position: relative;
+        box-sizing: border-box;
+        padding: 0;
+        margin: 0;
+        border-left: none;
+    }
+    
+    /* Menu button - positioned in bottom-right corner */
+    .menu-button {
+        position: fixed;
+        bottom: 15px;
+        right: 15px;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background-color: white;
+        border: 1px solid #ddd;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 90;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .menu-button:hover {
+        background-color: #f5f5f5;
+        transform: scale(1.05);
+    }
+    
+    .menu-button:active {
+        transform: scale(0.95);
+    }
+    
+    .hamburger {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 20px;
+        height: 14px;
+    }
+    
+    .hamburger span {
+        height: 2px;
+        width: 100%;
+        background-color: #555;
+        border-radius: 2px;
+        transition: all 0.3s;
     }
     
     /* Local mode banner */
@@ -760,21 +862,22 @@
         flex-wrap: nowrap;
         overflow-x: auto;
         white-space: nowrap;
-        padding: 10px;
+        padding: 6px 3px;
         background-color: #f8f8f8;
         border-bottom: 1px solid #e0e0e0;
-        gap: 8px;
+        gap: 2px;
     }
     
     .category-btn {
-        padding: 8px 16px;
+        padding: 5px 10px;
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
-        border-radius: 20px;
-        font-size: 14px;
+        border-radius: 18px;
+        font-size: 13px;
         cursor: pointer;
         transition: all 0.2s;
         flex-shrink: 0;
+        margin: 0;
     }
     
     .category-btn:hover {
@@ -792,31 +895,6 @@
         font-size: 16px;
         padding: 8px 14px;
         color: #7E7E7E;
-    }
-    
-    /* Submitted foods button */
-    .submitted-foods-button {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: white;
-        border: 1px solid #ddd;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        cursor: pointer;
-        z-index: 10;
-        transition: all 0.2s;
-    }
-    
-    .submitted-foods-button:hover {
-        background-color: #f5f5f5;
-        transform: scale(1.05);
     }
     
     /* Loading state */
