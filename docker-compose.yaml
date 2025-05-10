@@ -7,7 +7,14 @@ services:
       - "3123:3123"
     volumes:
       - .:/app:rw
+      - /app/node_modules  # Prevent overwriting node_modules with host directory
     environment:
       NODE_ENV: development
       CHOKIDAR_USEPOLLING: true
+      # Playwright specific environment variables
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1" # Skip browser download during npm install
+      CI: "true" # Run in CI mode for more stable behavior
     command: npm run dev
+    # Set up shared memory for browser
+    shm_size: 2gb

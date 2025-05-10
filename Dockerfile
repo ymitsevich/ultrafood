@@ -1,19 +1,18 @@
-FROM node:22-alpine
+# Use the official Playwright image which includes browser dependencies
+FROM mcr.microsoft.com/playwright:v1.42.1-jammy
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
+# Copy package files first
+COPY package*.json ./
 
-# Install dependencies with platform-specific binaries disabled
-# This avoids the @rollup/rollup-darwin-arm64 error
+# Install dependencies
 RUN npm install
 
-# Copy the rest of the application
+# Install Playwright browsers
+RUN npx playwright install chromium --with-deps
+
+# Copy the rest of the application AFTER installing dependencies
 COPY . .
-
-# Run another install after config files are copied to ensure
-# everything is properly set up
-RUN npm install
 
 CMD ["npm", "run", "dev"]

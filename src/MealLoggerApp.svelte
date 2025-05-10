@@ -16,7 +16,7 @@
         updateSubmittedMeal,
         deleteSubmittedMeal,
         backupFirestoreData,
-        LOCAL_ONLY_MODE
+        isFirebaseAvailable
     } from './firebase.js';
     
     // Import our components
@@ -96,58 +96,53 @@
             isLoading = true;
             loadError = null;
             
-            if (LOCAL_ONLY_MODE) {
-                console.log('Running in local-only mode - no data will be saved to Firebase');
-                usingLocalData = true;
+            // Get food items from Firebase with timeout
+            const firestoreItems = await getFoodItems();
+            
+            if (firestoreItems && firestoreItems.length > 0) {
+                console.log('Loaded food items from Firebase:', firestoreItems);
+                
+                // Add each item to the appropriate category
+                firestoreItems.forEach(item => {
+                    // Skip undefined items or items without id or name
+                    if (!item || !item.id || !item.name) {
+                        console.warn('Skipping invalid food item:', item);
+                        return;
+                    }
+                    
+                    const category = item.category || Object.keys(foodData)[0]; // Default to first category
+                    
+                    // Create category if it doesn't exist
+                    if (!foodData[category]) {
+                        foodData[category] = [];
+                    }
+                    
+                    // Add item to category if it's not already there
+                    const existingIndex = foodData[category].findIndex(f => f.id === item.id);
+                    if (existingIndex >= 0) {
+                        // Update existing item
+                        foodData[category][existingIndex] = { ...item };
+                    } else {
+                        // Add new item
+                        foodData[category].push(item);
+                    }
+                });
+                
+                // Filter out any undefined items that might have slipped in
+                Object.keys(foodData).forEach(category => {
+                    foodData[category] = foodData[category].filter(item => item && item.id && item.name);
+                });
+                
+                // Update foodData to trigger reactivity
+                foodData = { ...foodData };
             } else {
-                // Get food items from Firebase with timeout
-                const firestoreItems = await getFoodItems();
-                
-                if (firestoreItems && firestoreItems.length > 0) {
-                    console.log('Loaded food items from Firebase:', firestoreItems);
-                    
-                    // Add each item to the appropriate category
-                    firestoreItems.forEach(item => {
-                        // Skip undefined items or items without id or name
-                        if (!item || !item.id || !item.name) {
-                            console.warn('Skipping invalid food item:', item);
-                            return;
-                        }
-                        
-                        const category = item.category || Object.keys(foodData)[0]; // Default to first category
-                        
-                        // Create category if it doesn't exist
-                        if (!foodData[category]) {
-                            foodData[category] = [];
-                        }
-                        
-                        // Add item to category if it's not already there
-                        const existingIndex = foodData[category].findIndex(f => f.id === item.id);
-                        if (existingIndex >= 0) {
-                            // Update existing item
-                            foodData[category][existingIndex] = { ...item };
-                        } else {
-                            // Add new item
-                            foodData[category].push(item);
-                        }
-                    });
-                    
-                    // Filter out any undefined items that might have slipped in
-                    Object.keys(foodData).forEach(category => {
-                        foodData[category] = foodData[category].filter(item => item && item.id && item.name);
-                    });
-                    
-                    // Update foodData to trigger reactivity
-                    foodData = { ...foodData };
-                } else {
-                    console.log('No items from Firebase, using default data');
-                    usingLocalData = true;
-                }
-                
-                // Load submitted meals and update recent foods
-                await loadSubmittedMeals();
-                updateRecentFoods();
+                console.log('No items from Firebase, using default data');
+                usingLocalData = true;
             }
+            
+            // Load submitted meals and update recent foods
+            await loadSubmittedMeals();
+            updateRecentFoods();
         } catch (error) {
             console.error('Error loading food items from Firebase:', error);
             loadError = 'Using local data - could not connect to cloud database.';
@@ -244,7 +239,7 @@
     
     // Function to backup Firebase data
     async function backupData() {
-        if (LOCAL_ONLY_MODE) {
+        if (!isFirebaseAvailable()) {
             alert($language === 'ru' ? 
                 'Резервное копирование недоступно в локальном режиме' : 
                 'Backup not available in local-only mode');
@@ -382,7 +377,7 @@
         }
         
         // If not in local-only mode, also update all submitted meals containing this food item
-        if (!LOCAL_ONLY_MODE && isFirebaseAvailable()) {
+        if (isFirebaseAvailable()) {
             try {
                 // Show loading state or notification
                 const updateStatus = document.createElement('div');
@@ -572,16 +567,6 @@
             </button>
         </div>
 
-        <!-- Local mode banner -->
-        {#if LOCAL_ONLY_MODE}
-            <div class="local-mode-banner">
-                <p>
-                    <strong>{t('localModeActive')}</strong>
-                    <span class="hint">{t('cloudStorageHint')}</span>
-                </p>
-            </div>
-        {/if}
-
         <!-- Loading state -->
         {#if isLoading}
             <div class="loading-state">
@@ -599,7 +584,7 @@
             />
             
             <!-- Show status message if error occurred -->
-            {#if !LOCAL_ONLY_MODE && (usingLocalData || loadError)}
+            {#if usingLocalData || loadError}
                 <div class="status-message {loadError ? 'error' : 'info'}">
                     <p>
                         {loadError || t('localModeActive')}
@@ -871,24 +856,6 @@
         background-color: #555;
         border-radius: 2px;
         transition: all 0.3s;
-    }
-    
-    /* Local mode banner */
-    .local-mode-banner {
-        background-color: #fff3e0;
-        color: #e65100;
-        padding: 10px 15px;
-        margin: 10px;
-        border-radius: 8px;
-        border: 1px solid #ffcc80;
-        font-size: 14px;
-    }
-    
-    .local-mode-banner .hint {
-        font-size: 12px;
-        display: block;
-        margin-top: 3px;
-        color: #bf360c;
     }
     
     /* Categories */
