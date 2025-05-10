@@ -10,18 +10,12 @@
     export let foodItems = [];
     export let onConfigClick;
     export let onAddNewFood;
-    export let onEditFood; // New prop for opening the edit modal
-    export let isVirtualCategory = false; // New prop to identify virtual categories like "Recent"
+    export let onEditFood; // Prop for opening the edit modal
+    export let isVirtualCategory = false; // Prop to identify virtual categories like "Recent"
     
     // Track loading state of images
     let loadingImages = {};
     let addedToBasket = {};
-    
-    // Long press state
-    let pressTimer;
-    let longPressDuration = 500; // Time in ms to trigger a long press
-    let touchStartTime = 0;
-    let activeTouchId = null;
     
     onMount(() => {
         // Initialize loading state for all images
@@ -78,71 +72,17 @@
         return food?.defaultAmount || $foodDefaults[foodId]?.amount || '50g';
     }
     
-    // Handle edit button click with event stopping
-    function handleEditClick(e, food) {
+    // Handle config button click (for amount settings)
+    function handleConfigClick(e, food) {
         e.stopPropagation();
         onConfigClick(food);
     }
     
-    // Handle context menu (right-click) to open edit modal
-    function handleContextMenu(e, food) {
-        e.preventDefault(); // Prevent default context menu
+    // Handle edit button click to open edit modal
+    function handleEditClick(e, food) {
+        e.stopPropagation();
         if (onEditFood) {
             onEditFood(food);
-        }
-        return false;
-    }
-    
-    // Touch event handlers for long press
-    function handleTouchStart(e, food) {
-        if (activeTouchId !== null) return; // Already processing a touch
-        
-        activeTouchId = e.targetTouches[0].identifier;
-        touchStartTime = Date.now();
-        
-        // Set a timer for long press
-        pressTimer = setTimeout(() => {
-            if (onEditFood) {
-                onEditFood(food);
-            }
-            
-            // Vibrate if supported
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
-            
-        }, longPressDuration);
-    }
-    
-    function handleTouchEnd(e) {
-        clearLongPressTimer();
-        activeTouchId = null;
-    }
-    
-    function handleTouchMove(e) {
-        if (activeTouchId !== null) {
-            // Find the touch point that started the gesture
-            const touchIdx = Array.from(e.changedTouches).findIndex(
-                touch => touch.identifier === activeTouchId
-            );
-            
-            if (touchIdx !== -1) {
-                // If moved significantly, cancel the long press
-                const touch = e.changedTouches[touchIdx];
-                const moveThreshold = 10; // pixels
-                
-                if (Math.abs(touch.clientX - e.targetTouches[0].clientX) > moveThreshold ||
-                    Math.abs(touch.clientY - e.targetTouches[0].clientY) > moveThreshold) {
-                    clearLongPressTimer();
-                }
-            }
-        }
-    }
-    
-    function clearLongPressTimer() {
-        if (pressTimer) {
-            clearTimeout(pressTimer);
-            pressTimer = null;
         }
     }
 </script>
@@ -154,11 +94,6 @@
                 <button 
                     class="food-btn" 
                     on:click={() => addToBasket(food)}
-                    on:contextmenu={(e) => handleContextMenu(e, food)}
-                    on:touchstart={(e) => handleTouchStart(e, food)}
-                    on:touchend={handleTouchEnd}
-                    on:touchcancel={handleTouchEnd}
-                    on:touchmove={handleTouchMove}
                 >
                     <div class="food-visual">
                         {#if food.imageUrl || food.image}
@@ -193,8 +128,14 @@
                     <div class="default-amount">{getFoodDefaultAmount(food.id)}</div>
                 </button>
                 
+                <!-- Config button (amount settings) -->
+                <button class="config-btn" on:click={(e) => handleConfigClick(e, food)}>
+                    <span class="icon">⚖️</span>
+                </button>
+                
+                <!-- Edit button (added for editing food details) -->
                 <button class="edit-btn" on:click={(e) => handleEditClick(e, food)}>
-                    <span class="edit-icon">⚙️</span>
+                    <span class="icon">✏️</span>
                 </button>
             </div>
         {/each}
@@ -361,5 +302,64 @@
         .default-amount {
             font-size: 12px;
         }
+    }
+    
+    /* Button styling */
+    .config-btn, .edit-btn {
+        position: absolute;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 1px solid #ddd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        font-size: 14px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: all 0.2s;
+        z-index: 2;
+    }
+    
+    .config-btn {
+        top: 5px;
+        right: 5px;
+    }
+    
+    .edit-btn {
+        top: 5px;
+        left: 5px;
+    }
+    
+    .config-btn:hover, .edit-btn:hover {
+        transform: scale(1.1);
+        background-color: white;
+    }
+    
+    .icon {
+        font-size: 14px;
+    }
+    
+    .hidden {
+        display: none;
+    }
+    
+    .added-indicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(76, 175, 80, 0.9);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     }
 </style>

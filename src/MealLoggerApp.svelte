@@ -232,14 +232,10 @@
     let showTimeModal = false;
     let showAddFoodModal = false;
     let showEditFoodModal = false; 
-    let showEditMealModal = false; // New state for edit meal modal
+    let showEditMealModal = false;
     let selectedFood = null;
     let editingFood = null; 
     let selectedMeal = null; // Store the meal being edited
-
-    // Variables to manage long press behavior
-    let longPressTimer;
-    let longPressDuration = 600; // milliseconds
     
     // Function to open the edit meal modal
     function openEditMealModal(meal) {
@@ -249,50 +245,6 @@
         // Set the selected meal and open the edit modal
         selectedMeal = meal;
         showEditMealModal = true;
-    }
-    
-    // Handle long press start on meal card
-    function handleMealCardPress(event, meal) {
-        // Clear any existing timer first
-        if (longPressTimer) {
-            clearTimeout(longPressTimer);
-        }
-        
-        // Start a new timer
-        longPressTimer = setTimeout(() => {
-            openEditMealModal(meal);
-        }, longPressDuration);
-        
-        // Prevent default behaviors
-        event.preventDefault();
-    }
-    
-    // Handle long press end
-    function handleMealCardRelease() {
-        // Clear the timer
-        if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-        }
-    }
-    
-    // Handle right-click context menu on meal card (for desktop)
-    function handleMealCardContextMenu(event, meal) {
-        // Prevent the default context menu
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // Clear any existing timer to prevent both long-press and context menu from firing
-        if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-        }
-        
-        // Open the edit meal modal immediately
-        console.log('Right-click detected, opening edit modal for meal:', meal.id);
-        openEditMealModal(meal);
-        
-        return false; // Ensure no default context menu appears
     }
     
     // Handle meal save after editing
@@ -683,15 +635,7 @@
                 {:else}
                     <div class="submitted-meals-list">
                         {#each submittedMeals as meal (meal.id)}
-                            <div class="meal-card"
-                                on:mousedown={e => handleMealCardPress(e, meal)}
-                                on:mouseup={handleMealCardRelease}
-                                on:mouseleave={handleMealCardRelease}
-                                on:touchstart={e => handleMealCardPress(e, meal)}
-                                on:touchend={handleMealCardRelease}
-                                on:touchcancel={handleMealCardRelease}
-                                on:contextmenu={e => handleMealCardContextMenu(e, meal)}
-                            >
+                            <div class="meal-card">
                                 <div class="meal-header">
                                     <div class="meal-timestamp">{formatDate(meal.timestamp)}</div>
                                     <button 
