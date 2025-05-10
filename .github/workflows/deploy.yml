@@ -62,6 +62,52 @@ jobs:
         with:
           path: './dist'
 
+  test:
+    name: Run Playwright Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Compose Build
+        run: docker compose build
+
+      - name: Start Docker services
+        run: docker compose up -d
+
+      - name: Wait for services to be ready
+        run: sleep 10
+
+      - name: Build application in container
+        run: docker compose exec -T frontend npm run build
+
+      - name: Run Playwright tests in container
+        run: docker compose exec -T frontend npm run test
+        env:
+          CI: true
+
+      - name: Save test reports
+        if: always()
+        run: |
+          docker compose exec -T frontend bash -c "chmod -R 777 playwright-report test-results || true"
+          mkdir -p playwright-report test-results
+          docker cp $(docker compose ps -q frontend):/app/playwright-report/. ./playwright-report/
+          docker cp $(docker compose ps -q frontend):/app/test-results/. ./test-results/
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 30
+
   deploy:
     environment:
       name: github-pages
