@@ -17,6 +17,7 @@
 
     // Local state
     let foodName = "";
+    let calories = ""; // Added calories field
     let fileInput;
     let nameInput;
     let imageData = null;
@@ -36,6 +37,7 @@
     // Reset modal form to initial state
     function resetForm() {
         foodName = "";
+        calories = ""; // Reset calories field
         imageData = null;
         imageBlob = null;
         isUploading = false;
@@ -209,6 +211,7 @@
                 name: foodName.trim(),
                 category: currentCategory,
                 image: imageUrl,
+                calories: calories ? parseInt(calories, 10) : null, // Add calories to the food item
                 // Add any additional food properties here
             };
 
@@ -253,6 +256,17 @@
                     bind:this={nameInput}
                     bind:value={foodName}
                     placeholder="Enter food name"
+                />
+            </div>
+            
+            <div class="form-group">
+                <input
+                    id="food-calories"
+                    type="number"
+                    bind:value={calories}
+                    placeholder="Calories per 100g"
+                    min="0"
+                    step="1"
                 />
             </div>
             
@@ -347,7 +361,7 @@
         margin-bottom: 16px;
     }
 
-    input[type="text"] {
+    input[type="text"], input[type="number"] {
         width: 100%;
         padding: 10px;
         border: 1px solid #ddd;

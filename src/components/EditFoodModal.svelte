@@ -21,6 +21,7 @@
     let foodName = "";
     let imageSearchQuery = ""; 
     let selectedCategory = "";
+    let calories = ""; // Added calories field
     let fileInput;
     let nameInput;
     let imageData = null;
@@ -40,6 +41,7 @@
         foodName = foodItem.name || "";
         imageSearchQuery = foodItem.name || "";
         selectedCategory = foodItem.category || "";
+        calories = foodItem.calories || ""; // Load existing calories
         imageData = null;
         
         // Set the image if available
@@ -70,6 +72,7 @@
         foodName = "";
         imageSearchQuery = "";
         selectedCategory = "";
+        calories = ""; // Reset calories field
         imageData = null;
         imageBlob = null;
         isUploading = false;
@@ -239,10 +242,11 @@
                 name: foodName.trim(),
                 category: selectedCategory || foodItem.category,
                 image: imageUrl,
+                calories: calories ? parseInt(calories, 10) : null, // Add calories to the food item
                 // Preserve other properties
                 ...Object.fromEntries(
                     Object.entries(foodItem).filter(([key]) => 
-                        !['id', 'name', 'category', 'image', 'imageUrl'].includes(key)
+                        !['id', 'name', 'category', 'image', 'imageUrl', 'calories'].includes(key)
                     )
                 )
             };
@@ -330,6 +334,18 @@
                         <option value={category}>{category.charAt(0).toUpperCase() + category.slice(1)}</option>
                     {/each}
                 </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="food-calories">Calories (per 100g):</label>
+                <input
+                    id="food-calories"
+                    type="number"
+                    bind:value={calories}
+                    placeholder="Enter calories per 100g"
+                    min="0"
+                    step="1"
+                />
             </div>
             
             <!-- Current image display -->
@@ -464,7 +480,7 @@
         color: #555;
     }
 
-    input[type="text"], select {
+    input[type="text"], input[type="number"], select {
         width: 100%;
         padding: 10px;
         border: 1px solid #ddd;

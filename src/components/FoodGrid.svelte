@@ -126,6 +126,9 @@
                     </div>
                     <div class="food-name">{food.name}</div>
                     <div class="default-amount">{getFoodDefaultAmount(food.id)}</div>
+                    {#if food.calories}
+                        <div class="calories">{food.calories} kcal/100g</div>
+                    {/if}
                 </button>
                 
                 <!-- Config button (amount settings) -->
@@ -271,6 +274,11 @@
         color: #666;
     }
     
+    .calories {
+        font-size: 11px;
+        color: #999;
+    }
+    
     .food-image {
         width: 60px;
         height: 60px;
@@ -300,6 +308,10 @@
         }
         
         .default-amount {
+            font-size: 12px;
+        }
+        
+        .calories {
             font-size: 12px;
         }
     }

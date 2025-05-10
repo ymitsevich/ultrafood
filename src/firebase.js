@@ -618,6 +618,79 @@ export async function deleteSubmittedMeal(mealId) {
 }
 
 /**
+ * Backup all Firestore data into new collections with date prefix
+ * @returns {Promise<Object>} - Object containing backup status and details
+ */
+export async function backupFirestoreData() {
+  // If running in local-only mode, return mock data
+  if (LOCAL_ONLY_MODE) {
+    console.log("Local-only mode: Simulating backup");
+    return {
+      success: true,
+      prefix: `backup_${new Date().toISOString().split('T')[0]}`,
+      foodItemsCount: localFoodItems.length,
+      mealsCount: localSubmittedMeals.length
+    };
+  }
+  
+  // Check if Firebase is available
+  if (!db || !isFirebaseInitialized) {
+    console.error("Firestore not initialized yet");
+    return { 
+      success: false, 
+      message: "Database not available. Please try again later." 
+    };
+  }
+  
+  try {
+    // Create a prefix for the backup collections with current date
+    const currentDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    const prefix = `backup_${currentDate}`;
+    
+    // Step 1: Backup food items
+    const foodItemsSnapshot = await getDocs(collection(db, "food-items"));
+    let foodItemsCount = 0;
+    
+    for (const docSnapshot of foodItemsSnapshot.docs) {
+      await setDoc(
+        doc(db, `${prefix}_food-items`, docSnapshot.id),
+        docSnapshot.data()
+      );
+      foodItemsCount++;
+    }
+    
+    // Step 2: Backup submitted meals
+    const mealsSnapshot = await getDocs(collection(db, "submitted-meals"));
+    let mealsCount = 0;
+    
+    for (const docSnapshot of mealsSnapshot.docs) {
+      await setDoc(
+        doc(db, `${prefix}_submitted-meals`, docSnapshot.id),
+        docSnapshot.data()
+      );
+      mealsCount++;
+    }
+    
+    console.log(`Backup completed successfully with prefix: ${prefix}`);
+    console.log(`- ${foodItemsCount} food items backed up`);
+    console.log(`- ${mealsCount} meals backed up`);
+    
+    return {
+      success: true,
+      prefix,
+      foodItemsCount,
+      mealsCount
+    };
+  } catch (error) {
+    console.error("Error during backup:", error);
+    return {
+      success: false,
+      message: `Backup failed: ${error.message}`
+    };
+  }
+}
+
+/**
  * Check if Firebase is connected and available
  * @returns {boolean} - Whether Firebase is available
  */

@@ -7,11 +7,16 @@
     import { onMount } from 'svelte';
     import { 
         getFoodItems, 
-        getSubmittedMeals, 
-        getSubmittedMealsPaginated, 
-        isFirebaseAvailable, 
-        LOCAL_ONLY_MODE,
-        updateSubmittedMealsWithFoodItem
+        saveFoodItem, 
+        updateFoodItem, 
+        deleteFoodItem,
+        updateSubmittedMealsWithFoodItem,
+        saveSubmittedMeal,
+        getSubmittedMealsPaginated,
+        updateSubmittedMeal,
+        deleteSubmittedMeal,
+        backupFirestoreData,
+        LOCAL_ONLY_MODE
     } from './firebase.js';
     
     // Import our components
@@ -56,6 +61,11 @@
     // Language modal state
     let showLanguageModal = false;
     
+    // Backup state
+    let isBackingUp = false;
+    let backupResult = null;
+    let showBackupModal = false;
+    
     // Menu items configuration
     let menuItems = [
         {
@@ -67,6 +77,11 @@
             icon: '📋',
             label: () => t('loggedMeals'),
             action: openSubmittedMealsModal
+        },
+        {
+            icon: '💾',
+            label: () => $language === 'ru' ? 'Резервное копирование' : 'Backup Data',
+            action: backupData
         }
     ];
     
@@ -225,6 +240,34 @@
     function handleMealSubmitted() {
         console.log("Meal submitted, refreshing meal data...");
         loadSubmittedMeals(true); // Reset pagination to show the newest meal
+    }
+    
+    // Function to backup Firebase data
+    async function backupData() {
+        if (LOCAL_ONLY_MODE) {
+            alert($language === 'ru' ? 
+                'Резервное копирование недоступно в локальном режиме' : 
+                'Backup not available in local-only mode');
+            return;
+        }
+        
+        showBackupModal = true;
+        isBackingUp = true;
+        backupResult = null;
+        
+        try {
+            // Call the backup function
+            backupResult = await backupFirestoreData();
+            console.log('Backup completed:', backupResult);
+        } catch (error) {
+            console.error('Error during backup:', error);
+            backupResult = {
+                success: false,
+                message: error.message
+            };
+        } finally {
+            isBackingUp = false;
+        }
     }
     
     // Modal states
@@ -714,6 +757,54 @@
             </div>
         </div>
     {/if}
+
+    <!-- Backup Modal -->
+    {#if showBackupModal}
+        <div class="modal">
+            <div class="modal-content backup-modal">
+                <span class="close-modal" on:click={() => showBackupModal = false}>&times;</span>
+                <h2>{$language === 'ru' ? 'Резервное копирование' : 'Data Backup'}</h2>
+                
+                {#if isBackingUp}
+                    <div class="backup-loading">
+                        <div class="loading-spinner"></div>
+                        <p>{$language === 'ru' ? 'Создание резервной копии...' : 'Creating backup...'}</p>
+                    </div>
+                {:else if backupResult}
+                    <div class="backup-result {backupResult.success ? 'success' : 'error'}">
+                        {#if backupResult.success}
+                            <div class="success-icon">✓</div>
+                            <h3>{$language === 'ru' ? 'Резервное копирование выполнено!' : 'Backup Completed!'}</h3>
+                            <p>{$language === 'ru' ? 'Префикс резервной копии:' : 'Backup prefix:'} <code>{backupResult.prefix}</code></p>
+                            <div class="backup-stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">{$language === 'ru' ? 'Продукты:' : 'Food Items:'}</span>
+                                    <span class="stat-value">{backupResult.foodItemsCount}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">{$language === 'ru' ? 'Приемы пищи:' : 'Meals:'}</span>
+                                    <span class="stat-value">{backupResult.mealsCount}</span>
+                                </div>
+                            </div>
+                        {:else}
+                            <div class="error-icon">✗</div>
+                            <h3>{$language === 'ru' ? 'Ошибка резервного копирования' : 'Backup Failed'}</h3>
+                            <p>{backupResult.message}</p>
+                        {/if}
+                    </div>
+                {/if}
+                
+                <div class="form-actions">
+                    <button 
+                        class="close-btn" 
+                        on:click={() => showBackupModal = false}
+                    >
+                        {$language === 'ru' ? 'Закрыть' : 'Close'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -1113,6 +1204,87 @@
     .load-more-button:disabled {
         opacity: 0.6;
         cursor: not-allowed;
+    }
+
+    /* Backup Modal Styles */
+    .backup-modal {
+        width: 400px;
+        max-width: 90vw;
+        text-align: center;
+    }
+    
+    .backup-loading {
+        padding: 30px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .backup-result {
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .backup-result.success {
+        background-color: #e8f5e9;
+        border: 1px solid #c8e6c9;
+    }
+    
+    .backup-result.error {
+        background-color: #ffebee;
+        border: 1px solid #ffcdd2;
+    }
+    
+    .success-icon {
+        font-size: 48px;
+        color: #4caf50;
+        margin-bottom: 15px;
+    }
+    
+    .error-icon {
+        font-size: 48px;
+        color: #f44336;
+        margin-bottom: 15px;
+    }
+    
+    .backup-stats {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 15px;
+    }
+    
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .stat-label {
+        font-size: 14px;
+        color: #555;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .close-btn {
+        background-color: #f5f5f5;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    
+    .close-btn:hover {
+        background-color: #e5e5e5;
     }
 
     @media (max-width: 600px) {
