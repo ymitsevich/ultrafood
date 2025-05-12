@@ -1,14 +1,16 @@
 <script>
-    import { onMount } from "svelte";
-    import {
-        uploadFoodImage,
-        centerObject,
-        enhanceImage,
-    } from "../cloudinary.js";
-    import { saveFoodItem } from "../firebase.js";
-    import { fetchImageAsBlob } from "../pixabay.js";
+    import { onMount, getContext } from "svelte";
     import { generateFoodId } from "../utils.js";
     import PixabayImageSearch from "./PixabayImageSearch.svelte";
+
+    // Get services from context
+    const services = getContext('services') || {};
+    const { cloudinary, firebase, pixabay } = services;
+    
+    // Extract specific functions from services
+    const { uploadFoodImage, centerObject, enhanceImage } = cloudinary || {};
+    const { saveFoodItem } = firebase || {};
+    const { fetchImageAsBlob } = pixabay || {};
 
     // Exported props
     export let showModal = false;

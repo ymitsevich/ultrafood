@@ -1,6 +1,9 @@
 <script>
-    import { onMount } from 'svelte';
-    import { updateSubmittedMeal, deleteSubmittedMeal } from '../firebase.js';
+    import { onMount, getContext } from 'svelte';
+    
+    // Get services from context
+    const services = getContext('services') || {};
+    const { firebase } = services;
 
     // Exported props
     export let showModal = false;
@@ -52,8 +55,8 @@
             isLoading = true;
             errorMessage = '';
             
-            // Update the meal in the database
-            await updateSubmittedMeal(editedMeal);
+            // Update the meal in the database using the firebase service from the container
+            await firebase.updateSubmittedMeal(editedMeal);
             
             // Notify the parent component
             onSave(editedMeal);
@@ -76,8 +79,8 @@
             isLoading = true;
             errorMessage = '';
             
-            // Delete the meal from the database
-            await deleteSubmittedMeal(editedMeal.id);
+            // Delete the meal from the database using the firebase service from the container
+            await firebase.deleteSubmittedMeal(editedMeal.id);
             
             // Notify the parent component
             onDelete(editedMeal.id);

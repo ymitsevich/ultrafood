@@ -1,6 +1,9 @@
 <script>
-    import { onMount, afterUpdate } from 'svelte';
-    import { searchFoodImages } from '../pixabay.js';
+    import { onMount, afterUpdate, getContext } from 'svelte';
+    
+    // Get services from context
+    const services = getContext('services') || {};
+    const { pixabay } = services;
     
     // Props
     export let searchQuery = '';
@@ -39,7 +42,7 @@
         
         try {
             console.log(`Searching Pixabay for: "${query}"`);
-            const results = await searchFoodImages(query);
+            const results = await pixabay.searchFoodImages(query);
             console.log(`Raw Pixabay results:`, results);
             
             if (results && Array.isArray(results)) {

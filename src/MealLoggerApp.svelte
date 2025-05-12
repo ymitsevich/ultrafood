@@ -4,20 +4,7 @@
     import { foodDefaults } from './stores/foodDefaults.js';
     import { basket } from './stores/basket.js';
     import { language, t } from './stores/language.js';
-    import { onMount } from 'svelte';
-    import { 
-        getFoodItems, 
-        saveFoodItem, 
-        updateFoodItem, 
-        deleteFoodItem,
-        updateSubmittedMealsWithFoodItem,
-        saveSubmittedMeal,
-        getSubmittedMealsPaginated,
-        updateSubmittedMeal,
-        deleteSubmittedMeal,
-        backupFirestoreData,
-        isFirebaseAvailable
-    } from './firebase.js';
+    import { onMount, setContext } from 'svelte';
     
     // Import our components
     import BasketSidebar from './BasketSidebar.svelte';
@@ -29,6 +16,15 @@
     import EditMealModal from './components/EditMealModal.svelte';
     import LanguageModal from './components/LanguageModal.svelte';
     import SlideUpMenu from './components/SlideUpMenu.svelte';
+    
+    // Accept services from dependency injection container
+    export let services;
+    
+    // Extract services from the props
+    const { firebase, cloudinary, pixabay } = services;
+    
+    // Make services available to all child components via context
+    setContext('services', services);
     
     // Menu state
     let showMenu = false;
@@ -97,7 +93,7 @@
             loadError = null;
             
             // Get food items from Firebase with timeout
-            const firestoreItems = await getFoodItems();
+            const firestoreItems = await firebase.getFoodItems();
             
             if (firestoreItems && firestoreItems.length > 0) {
                 console.log('Loaded food items from Firebase:', firestoreItems);
@@ -175,7 +171,7 @@
                 currentPage = 1;
             }
             
-            const result = await getSubmittedMealsPaginated(MEALS_PER_PAGE, lastVisibleMeal);
+            const result = await firebase.getSubmittedMealsPaginated(MEALS_PER_PAGE, lastVisibleMeal);
             
             if (resetPagination) {
                 // Replace the meals array with the first page
@@ -239,7 +235,7 @@
     
     // Function to backup Firebase data
     async function backupData() {
-        if (!isFirebaseAvailable()) {
+        if (!firebase.isFirebaseAvailable()) {
             alert($language === 'ru' ? 
                 'Резервное копирование недоступно в локальном режиме' : 
                 'Backup not available in local-only mode');
@@ -252,7 +248,7 @@
         
         try {
             // Call the backup function
-            backupResult = await backupFirestoreData();
+            backupResult = await firebase.backupFirestoreData();
             console.log('Backup completed:', backupResult);
         } catch (error) {
             console.error('Error during backup:', error);
@@ -377,7 +373,7 @@
         }
         
         // If not in local-only mode, also update all submitted meals containing this food item
-        if (isFirebaseAvailable()) {
+        if (firebase.isFirebaseAvailable()) {
             try {
                 // Show loading state or notification
                 const updateStatus = document.createElement('div');
@@ -396,7 +392,7 @@
                 document.body.appendChild(updateStatus);
                 
                 // Update all submitted meals in Firebase that contain this food item
-                await updateSubmittedMealsWithFoodItem(originalFood.id, updatedFood);
+                await firebase.updateSubmittedMealsWithFoodItem(originalFood.id, updatedFood);
                 
                 // Refresh the loaded submitted meals to reflect changes
                 if (submittedMeals.length > 0) {

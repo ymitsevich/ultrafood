@@ -1,10 +1,14 @@
 <script>
     import { basket } from './stores/basket.js';
-    import { saveSubmittedMeal } from './firebase.js';
+    import { getContext } from 'svelte';
     
     // Exported props
     export let onSubmitBasket;
     export let onMealSubmitted = () => {}; // Callback for when a meal is submitted successfully
+    
+    // Get services from the nearest parent component
+    const services = getContext('services') || {};
+    const firebase = services.firebase;
     
     // Constants
     const SUBMIT_NOW_MESSAGE = 'Logged {count} items to your meal (Now)!';
@@ -24,7 +28,7 @@
             console.log("Submitting basket with time: Now");
             
             // Save meal to Firebase
-            const mealId = await saveSubmittedMeal(basketItems, timestamp);
+            const mealId = await firebase.saveSubmittedMeal(basketItems, timestamp);
             
             if (mealId) {
                 // Show confirmation
