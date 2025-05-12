@@ -1,5 +1,8 @@
 import { writable } from 'svelte/store';
-import { updateFoodItem } from '../firebase.js';
+import container from '../container.js';
+
+// Get the database service from the container
+const databaseService = container.resolve('database');
 
 // Create a writable store for the food defaults
 const foodDefaultsStore = writable({});
@@ -25,12 +28,12 @@ export const foodDefaults = {
             }
         }));
         
-        // Also update the default amount in Firebase
+        // Also update the default amount in the database
         try {
-            updateFoodItem(foodId, { defaultAmount: amount });
-            console.log(`Default amount for food ${foodId} updated to ${amount} in Firebase`);
+            databaseService.updateFoodItem({ id: foodId, defaultAmount: amount });
+            console.log(`Default amount for food ${foodId} updated to ${amount} in database`);
         } catch (error) {
-            console.error(`Failed to update default amount in Firebase: ${error}`);
+            console.error(`Failed to update default amount in database: ${error}`);
         }
     },
     
