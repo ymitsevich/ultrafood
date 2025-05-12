@@ -1,7 +1,7 @@
 import { createContainer, asValue } from 'awilix';
-import * as cloudinaryModule from './cloudinary.js';
-import * as pixabayModule from './pixabay.js';
 import { FirebaseDatabaseService } from './services/FirebaseDatabaseService.js';
+import { CloudinaryImageHostingService } from './services/CloudinaryImageHostingService.js';
+import { PixabayImageSearchService } from './services/PixabayImageSearchService.js';
 
 // Create the container
 const container = createContainer();
@@ -11,15 +11,15 @@ const isTest = process.env.NODE_ENV === 'test';
 
 // Create service instances
 const databaseService = new FirebaseDatabaseService();
-const imageHosting = { ...cloudinaryModule };
-const imageSearch = { ...pixabayModule };
+const imageHostingService = new CloudinaryImageHostingService();
+const imageSearchService = new PixabayImageSearchService();
 
 // Register all services
 container.register({
   // Core services with generic names
   database: asValue(databaseService),
-  imageHosting: asValue(imageHosting),
-  imageSearch: asValue(imageSearch),
+  imageHosting: asValue(imageHostingService),
+  imageSearch: asValue(imageSearchService),
   
   // Environment variables and configuration
   isTestEnv: asValue(isTest)

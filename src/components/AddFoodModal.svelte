@@ -7,8 +7,8 @@
     const services = getContext('services') || {};
     const { database, imageHosting, imageSearch } = services;
     
-    // Extract specific functions from services
-    const { uploadFoodImage, centerObject, enhanceImage } = imageHosting || {};
+    // Extract specific functions from services using the new interface method names
+    const { uploadImage, centerObject, enhanceImage } = imageHosting || {};
     const { saveFoodItem } = database || {};
     const { fetchImageAsBlob } = imageSearch || {};
 
@@ -197,7 +197,7 @@
             }
 
             // Upload the image to Cloudinary
-            const imageUrl = await uploadFoodImage(imageBlob, foodName);
+            const imageUrl = await uploadImage(imageBlob, foodName);
             
             if (!imageUrl) {
                 throw new Error("Failed to upload image");

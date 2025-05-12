@@ -42,7 +42,7 @@
         
         try {
             console.log(`Searching for food images: "${query}"`);
-            const results = await imageSearch.searchFoodImages(query);
+            const results = await imageSearch.searchImages(query);
             console.log(`Raw search results:`, results);
             
             if (results && Array.isArray(results)) {

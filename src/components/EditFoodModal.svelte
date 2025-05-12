@@ -7,8 +7,8 @@
     const services = getContext('services') || {};
     const { database, imageHosting, imageSearch } = services;
     
-    // Extract specific functions from services
-    const { uploadFoodImage, centerObject, enhanceImage } = imageHosting || {};
+    // Extract specific functions from services using the new interface method names
+    const { uploadImage, centerObject, enhanceImage } = imageHosting || {};
     const { saveFoodItem, deleteFoodItem } = database || {};
     const { fetchImageAsBlob } = imageSearch || {};
 
@@ -229,9 +229,9 @@
                 // Use the smallest image URL available
                 const smallImageUrl = selectedPixabayImage.smallImageUrl || selectedPixabayImage.previewURL;
                 imageBlob = await fetchImageAsBlob(smallImageUrl);
-                imageUrl = await uploadFoodImage(imageBlob, foodName);
+                imageUrl = await uploadImage(imageBlob, foodName);
             } else if (imageBlob) {
-                imageUrl = await uploadFoodImage(imageBlob, foodName);
+                imageUrl = await uploadImage(imageBlob, foodName);
             }
             
             if (!imageUrl) {
