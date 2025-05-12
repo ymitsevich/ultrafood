@@ -20,8 +20,8 @@
     // Accept services from dependency injection container
     export let services;
     
-    // Extract services from the props
-    const { firebase, cloudinary, pixabay } = services;
+    // Extract services from the props using new generic names
+    const { database, imageHosting, imageSearch } = services;
     
     // Make services available to all child components via context
     setContext('services', services);
@@ -86,17 +86,17 @@
     let hasNextPage = false;
     let currentPage = 1;
     
-    // Load food items and submitted meals from Firebase on component mount
+    // Load food items and submitted meals from database on component mount
     onMount(async () => {
         try {
             isLoading = true;
             loadError = null;
             
-            // Get food items from Firebase with timeout
-            const firestoreItems = await firebase.getFoodItems();
+            // Get food items from database with timeout
+            const firestoreItems = await database.getFoodItems();
             
             if (firestoreItems && firestoreItems.length > 0) {
-                console.log('Loaded food items from Firebase:', firestoreItems);
+                console.log('Loaded food items from database:', firestoreItems);
                 
                 // Add each item to the appropriate category
                 firestoreItems.forEach(item => {
@@ -132,7 +132,7 @@
                 // Update foodData to trigger reactivity
                 foodData = { ...foodData };
             } else {
-                console.log('No items from Firebase, using default data');
+                console.log('No items from database, using default data');
                 usingLocalData = true;
             }
             
@@ -140,7 +140,7 @@
             await loadSubmittedMeals();
             updateRecentFoods();
         } catch (error) {
-            console.error('Error loading food items from Firebase:', error);
+            console.error('Error loading food items from database:', error);
             loadError = 'Using local data - could not connect to cloud database.';
             usingLocalData = true;
         } finally {
@@ -158,7 +158,7 @@
         showLanguageModal = true;
     }
     
-    // Load submitted meals from Firebase with pagination
+    // Load submitted meals from database with pagination
     async function loadSubmittedMeals(resetPagination = true) {
         try {
             isLoadingMeals = true;
@@ -171,7 +171,7 @@
                 currentPage = 1;
             }
             
-            const result = await firebase.getSubmittedMealsPaginated(MEALS_PER_PAGE, lastVisibleMeal);
+            const result = await database.getSubmittedMealsPaginated(MEALS_PER_PAGE, lastVisibleMeal);
             
             if (resetPagination) {
                 // Replace the meals array with the first page
@@ -233,9 +233,9 @@
         loadSubmittedMeals(true); // Reset pagination to show the newest meal
     }
     
-    // Function to backup Firebase data
+    // Function to backup database data
     async function backupData() {
-        if (!firebase.isFirebaseAvailable()) {
+        if (!database.isFirebaseAvailable()) {
             alert($language === 'ru' ? 
                 'Резервное копирование недоступно в локальном режиме' : 
                 'Backup not available in local-only mode');
@@ -248,7 +248,7 @@
         
         try {
             // Call the backup function
-            backupResult = await firebase.backupFirestoreData();
+            backupResult = await database.backupFirestoreData();
             console.log('Backup completed:', backupResult);
         } catch (error) {
             console.error('Error during backup:', error);
@@ -373,7 +373,7 @@
         }
         
         // If not in local-only mode, also update all submitted meals containing this food item
-        if (firebase.isFirebaseAvailable()) {
+        if (database.isFirebaseAvailable()) {
             try {
                 // Show loading state or notification
                 const updateStatus = document.createElement('div');
@@ -391,8 +391,8 @@
                 updateStatus.style.zIndex = '100';
                 document.body.appendChild(updateStatus);
                 
-                // Update all submitted meals in Firebase that contain this food item
-                await firebase.updateSubmittedMealsWithFoodItem(originalFood.id, updatedFood);
+                // Update all submitted meals in database that contain this food item
+                await database.updateSubmittedMealsWithFoodItem(originalFood.id, updatedFood);
                 
                 // Refresh the loaded submitted meals to reflect changes
                 if (submittedMeals.length > 0) {
@@ -570,7 +570,7 @@
             </div>
         {:else}
             <!-- Food Grid Component - Handle Recent Virtual Category Separately -->
-            <FoodGrid 
+            <FoodGrid
                 category={currentCategory}
                 foodItems={currentCategory === RECENT_CATEGORY ? recentFoods : (foodData[currentCategory] || [])}
                 onConfigClick={openAmountModal}
@@ -578,7 +578,7 @@
                 onEditFood={openEditFoodModal}
                 isVirtualCategory={currentCategory === RECENT_CATEGORY}
             />
-            
+
             <!-- Show status message if error occurred -->
             {#if usingLocalData || loadError}
                 <div class="status-message {loadError ? 'error' : 'info'}">
@@ -598,10 +598,10 @@
             <span></span>
         </div>
     </button>
-    
+
     <!-- Slide-up Menu -->
-    <SlideUpMenu 
-        bind:showMenu={showMenu} 
+    <SlideUpMenu
+        bind:showMenu={showMenu}
         menuItems={menuItems.map(item => ({
             ...item,
             label: typeof item.label === 'function' ? item.label() : item.label
@@ -610,17 +610,17 @@
 
     <!-- Modals -->
     <AmountModal bind:showModal={showAmountModal} bind:selectedFood={selectedFood} />
-    <TimeModal 
-        bind:showModal={showTimeModal} 
-        onMealSubmitted={handleMealSubmitted} 
+    <TimeModal
+        bind:showModal={showTimeModal}
+        onMealSubmitted={handleMealSubmitted}
     />
-    <AddFoodModal 
-        bind:showModal={showAddFoodModal} 
+    <AddFoodModal
+        bind:showModal={showAddFoodModal}
         currentCategory={currentCategory === RECENT_CATEGORY ? Object.keys(foodData)[0] || '' : currentCategory}
-        onAddFood={handleAddNewFood} 
+        onAddFood={handleAddNewFood}
     />
     <!-- Edit Food Modal -->
-    <EditFoodModal 
+    <EditFoodModal
         bind:showModal={showEditFoodModal}
         foodItem={editingFood}
         onSave={handleSaveEditedFood}
@@ -628,7 +628,7 @@
         categories={Object.keys(foodData).filter(cat => cat !== RECENT_CATEGORY)}
     />
     <!-- Edit Meal Modal -->
-    <EditMealModal 
+    <EditMealModal
         bind:showModal={showEditMealModal}
         meal={selectedMeal}
         onSave={handleSaveEditedMeal}
@@ -636,14 +636,14 @@
     />
     <!-- Language Modal -->
     <LanguageModal bind:showModal={showLanguageModal} />
-    
+
     <!-- Submitted Meals Modal -->
     {#if showSubmittedMealsModal}
         <div class="modal">
             <div class="modal-content submitted-meals-modal">
                 <span class="close-modal" on:click={closeSubmittedMealsModal}>&times;</span>
                 <h2>{t('loggedMeals')}</h2>
-                
+
                 {#if isLoadingMeals && submittedMeals.length === 0}
                     <div class="loading-meals">
                         <p>{t('loading')}</p>
@@ -662,8 +662,8 @@
                             <div class="meal-card">
                                 <div class="meal-header">
                                     <div class="meal-timestamp">{formatDate(meal.timestamp)}</div>
-                                    <button 
-                                        class="edit-meal-button" 
+                                    <button
+                                        class="edit-meal-button"
                                         on:click|stopPropagation={() => openEditMealModal(meal)}
                                         aria-label={t('editMeal')}
                                     >
@@ -691,7 +691,7 @@
                                 </div>
                             </div>
                         {/each}
-                        
+
                         {#if isLoadingMeals && submittedMeals.length > 0}
                             <div class="loading-more">
                                 <div class="loading-spinner"></div>
@@ -699,7 +699,7 @@
                             </div>
                         {/if}
                     </div>
-                    
+
                     <div class="pagination-controls">
                         {#if hasNextPage}
                             <button class="load-more-button" on:click={loadMoreMeals} disabled={isLoadingMeals}>
@@ -711,24 +711,24 @@
             </div>
         </div>
     {/if}
-    
+
     <!-- Add Category Modal -->
     {#if showAddCategoryModal}
         <div class="modal">
             <div class="modal-content add-category-modal">
                 <span class="close-modal" on:click={() => showAddCategoryModal = false}>&times;</span>
                 <h2>{t('addCategory')}</h2>
-                
+
                 <div class="form-group">
                     <label for="category-name">{t('categoryName')}</label>
-                    <input 
-                        type="text" 
-                        id="category-name" 
-                        bind:value={newCategoryName} 
+                    <input
+                        type="text"
+                        id="category-name"
+                        bind:value={newCategoryName}
                         placeholder={t('enterCategoryName')}
                     >
                 </div>
-                
+
                 <div class="form-actions">
                     <button class="cancel-btn" on:click={() => showAddCategoryModal = false}>{t('cancel')}</button>
                     <button class="save-btn" on:click={addNewCategory} disabled={!newCategoryName.trim()}>
@@ -745,7 +745,7 @@
             <div class="modal-content backup-modal">
                 <span class="close-modal" on:click={() => showBackupModal = false}>&times;</span>
                 <h2>{$language === 'ru' ? 'Резервное копирование' : 'Data Backup'}</h2>
-                
+
                 {#if isBackingUp}
                     <div class="backup-loading">
                         <div class="loading-spinner"></div>
@@ -774,10 +774,10 @@
                         {/if}
                     </div>
                 {/if}
-                
+
                 <div class="form-actions">
-                    <button 
-                        class="close-btn" 
+                    <button
+                        class="close-btn"
                         on:click={() => showBackupModal = false}
                     >
                         {$language === 'ru' ? 'Закрыть' : 'Close'}
@@ -796,7 +796,7 @@
         overflow: hidden;
         width: 100%;
     }
-    
+
     /* Main content area to properly contain the food grid */
     .main-content {
         flex: 1;
@@ -809,7 +809,7 @@
         margin: 0;
         border-left: none;
     }
-    
+
     /* Menu button - positioned in bottom-right corner */
     .menu-button {
         position: fixed;
@@ -828,16 +828,16 @@
         cursor: pointer;
         transition: all 0.2s;
     }
-    
+
     .menu-button:hover {
         background-color: #f5f5f5;
         transform: scale(1.05);
     }
-    
+
     .menu-button:active {
         transform: scale(0.95);
     }
-    
+
     .hamburger {
         display: flex;
         flex-direction: column;
@@ -845,7 +845,7 @@
         width: 20px;
         height: 14px;
     }
-    
+
     .hamburger span {
         height: 2px;
         width: 100%;
@@ -853,7 +853,7 @@
         border-radius: 2px;
         transition: all 0.3s;
     }
-    
+
     /* Categories */
     .categories {
         display: flex;
@@ -865,7 +865,7 @@
         border-bottom: 1px solid #e0e0e0;
         gap: 2px;
     }
-    
+
     .category-btn {
         padding: 5px 10px;
         background-color: #ffffff;
@@ -877,24 +877,24 @@
         flex-shrink: 0;
         margin: 0;
     }
-    
+
     .category-btn:hover {
         background-color: #f5f5f5;
     }
-    
+
     .category-btn.active {
         background-color: #C26C51;
         color: white;
         border-color: #C26C51;
     }
-    
+
     .add-category-btn {
         font-weight: bold;
         font-size: 16px;
         padding: 8px 14px;
         color: #7E7E7E;
     }
-    
+
     /* Loading state */
     .loading-state {
         display: flex;
@@ -903,7 +903,7 @@
         height: 300px;
         color: #888;
     }
-    
+
     /* Status messages */
     .status-message {
         position: fixed;
@@ -916,19 +916,19 @@
         z-index: 5;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
-    
+
     .status-message.info {
         background-color: #e3f2fd;
         color: #0d47a1;
         border: 1px solid #bbdefb;
     }
-    
+
     .status-message.error {
         background-color: #ffebee;
         color: #c62828;
         border: 1px solid #ffcdd2;
     }
-    
+
     /* Modal */
     .modal {
         position: fixed;
@@ -942,7 +942,7 @@
         align-items: center;
         z-index: 1000;
     }
-    
+
     .modal-content {
         background: white;
         padding: 20px;
@@ -952,7 +952,7 @@
         overflow-y: auto;
         position: relative;
     }
-    
+
     .close-modal {
         position: absolute;
         top: 10px;
@@ -961,27 +961,27 @@
         cursor: pointer;
         color: #999;
     }
-    
+
     .close-modal:hover {
         color: #333;
     }
-    
+
     /* Add Category Modal */
     .add-category-modal {
         width: 400px;
         max-width: 90vw;
     }
-    
+
     .form-group {
         margin-bottom: 20px;
     }
-    
+
     .form-group label {
         display: block;
         margin-bottom: 8px;
         font-weight: 500;
     }
-    
+
     .form-group input {
         width: 100%;
         padding: 10px;
@@ -989,13 +989,13 @@
         border-radius: 6px;
         font-size: 16px;
     }
-    
+
     .form-actions {
         display: flex;
         justify-content: flex-end;
         gap: 10px;
     }
-    
+
     .cancel-btn, .save-btn {
         padding: 10px 20px;
         border-radius: 6px;
@@ -1003,34 +1003,34 @@
         cursor: pointer;
         border: none;
     }
-    
+
     .cancel-btn {
         background-color: #f5f5f5;
     }
-    
+
     .save-btn {
         background-color: #C26C51;
         color: white;
     }
-    
+
     .save-btn:disabled {
         background-color: #cccccc;
         cursor: not-allowed;
     }
-    
+
     /* Submitted Meals Modal */
     .submitted-meals-modal {
         width: 600px;
         max-width: 90vw;
         max-height: 80vh;
     }
-    
+
     .submitted-meals-list {
         max-height: 60vh;
         overflow-y: auto;
         padding: 10px 0;
     }
-    
+
     .meal-card {
         border: 1px solid #eee;
         border-radius: 10px;
@@ -1040,7 +1040,7 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         position: relative;
     }
-    
+
     .meal-header {
         display: flex;
         justify-content: space-between;
@@ -1048,13 +1048,13 @@
         padding-bottom: 8px;
         border-bottom: 1px solid #f0f0f0;
     }
-    
+
     .meal-timestamp {
         font-weight: 500;
         color: #555;
         font-size: 14px;
     }
-    
+
     .edit-meal-button {
         background: none;
         border: none;
@@ -1062,13 +1062,13 @@
         cursor: pointer;
         padding: 0 5px;
     }
-    
+
     .meal-items {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
     }
-    
+
     .meal-item {
         display: flex;
         align-items: center;
@@ -1078,7 +1078,7 @@
         padding: 8px;
         background-color: #fafafa;
     }
-    
+
     .meal-item-visual {
         flex-shrink: 0;
         width: 40px;
@@ -1088,24 +1088,24 @@
         align-items: center;
         justify-content: center;
     }
-    
+
     .meal-item-emoji {
         font-size: 24px;
     }
-    
+
     .meal-item-image {
         width: 40px;
         height: 40px;
         object-fit: cover;
         border-radius: 5px;
     }
-    
+
     .meal-item-details {
         display: flex;
         flex-direction: column;
         overflow: hidden;
     }
-    
+
     .meal-item-name {
         font-weight: 500;
         font-size: 13px;
@@ -1113,22 +1113,22 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    
+
     .meal-item-amount {
         font-size: 12px;
         color: #777;
     }
-    
+
     .no-meals-message, .error-message, .loading-meals, .loading-more {
         text-align: center;
         padding: 20px;
         color: #777;
     }
-    
+
     .error-message {
         color: #e53935;
     }
-    
+
     .loading-spinner {
         width: 30px;
         height: 30px;
@@ -1138,18 +1138,18 @@
         animation: spin 1s linear infinite;
         margin: 0 auto 10px;
     }
-    
+
     @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-    
+
     .pagination-controls {
         display: flex;
         justify-content: center;
         margin-top: 20px;
     }
-    
+
     .load-more-button {
         background-color: #f0f0f0;
         border: none;
@@ -1159,11 +1159,11 @@
         font-size: 14px;
         transition: background-color 0.2s;
     }
-    
+
     .load-more-button:hover {
         background-color: #e0e0e0;
     }
-    
+
     .load-more-button:disabled {
         opacity: 0.6;
         cursor: not-allowed;
@@ -1175,67 +1175,67 @@
         max-width: 90vw;
         text-align: center;
     }
-    
+
     .backup-loading {
         padding: 30px 0;
         display: flex;
         flex-direction: column;
         align-items: center;
     }
-    
+
     .backup-result {
         padding: 20px;
         margin: 20px 0;
         border-radius: 8px;
         text-align: center;
     }
-    
+
     .backup-result.success {
         background-color: #e8f5e9;
         border: 1px solid #c8e6c9;
     }
-    
+
     .backup-result.error {
         background-color: #ffebee;
         border: 1px solid #ffcdd2;
     }
-    
+
     .success-icon {
         font-size: 48px;
         color: #4caf50;
         margin-bottom: 15px;
     }
-    
+
     .error-icon {
         font-size: 48px;
         color: #f44336;
         margin-bottom: 15px;
     }
-    
+
     .backup-stats {
         display: flex;
         justify-content: center;
         gap: 20px;
         margin-top: 15px;
     }
-    
+
     .stat-item {
         display: flex;
         flex-direction: column;
         align-items: center;
     }
-    
+
     .stat-label {
         font-size: 14px;
         color: #555;
     }
-    
+
     .stat-value {
         font-size: 24px;
         font-weight: 600;
         color: #333;
     }
-    
+
     .close-btn {
         background-color: #f5f5f5;
         border: none;
@@ -1245,7 +1245,7 @@
         cursor: pointer;
         margin-top: 10px;
     }
-    
+
     .close-btn:hover {
         background-color: #e5e5e5;
     }

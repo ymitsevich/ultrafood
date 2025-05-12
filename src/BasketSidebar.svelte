@@ -6,9 +6,9 @@
     export let onSubmitBasket;
     export let onMealSubmitted = () => {}; // Callback for when a meal is submitted successfully
     
-    // Get services from the nearest parent component
+    // Get services from the nearest parent component using generic names
     const services = getContext('services') || {};
-    const firebase = services.firebase;
+    const { database } = services;
     
     // Constants
     const SUBMIT_NOW_MESSAGE = 'Logged {count} items to your meal (Now)!';
@@ -27,14 +27,14 @@
             // Log action
             console.log("Submitting basket with time: Now");
             
-            // Save meal to Firebase
-            const mealId = await firebase.saveSubmittedMeal(basketItems, timestamp);
+            // Save meal to database
+            const mealId = await database.saveSubmittedMeal(basketItems, timestamp);
             
             if (mealId) {
                 // Show confirmation
                 showConfirmation($basket.length);
                 
-                // Clear the basket after submission
+                // Clear basket after submission
                 basket.clear();
                 
                 // Call the callback to refresh submitted meals

@@ -3,14 +3,14 @@
     import { generateFoodId } from "../utils.js";
     import PixabayImageSearch from "./PixabayImageSearch.svelte";
 
-    // Get services from context
+    // Get services from context with generic names
     const services = getContext('services') || {};
-    const { cloudinary, firebase, pixabay } = services;
+    const { database, imageHosting, imageSearch } = services;
     
     // Extract specific functions from services
-    const { uploadFoodImage, centerObject, enhanceImage } = cloudinary || {};
-    const { saveFoodItem, deleteFoodItem } = firebase || {};
-    const { fetchImageAsBlob } = pixabay || {};
+    const { uploadFoodImage, centerObject, enhanceImage } = imageHosting || {};
+    const { saveFoodItem, deleteFoodItem } = database || {};
+    const { fetchImageAsBlob } = imageSearch || {};
 
     // Exported props
     export let showModal = false;

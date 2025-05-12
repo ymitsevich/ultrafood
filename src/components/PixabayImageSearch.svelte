@@ -1,9 +1,9 @@
 <script>
     import { onMount, afterUpdate, getContext } from 'svelte';
     
-    // Get services from context
+    // Get services from context with generic names
     const services = getContext('services') || {};
-    const { pixabay } = services;
+    const { imageSearch } = services;
     
     // Props
     export let searchQuery = '';
@@ -41,9 +41,9 @@
         searchError = null;
         
         try {
-            console.log(`Searching Pixabay for: "${query}"`);
-            const results = await pixabay.searchFoodImages(query);
-            console.log(`Raw Pixabay results:`, results);
+            console.log(`Searching for food images: "${query}"`);
+            const results = await imageSearch.searchFoodImages(query);
+            console.log(`Raw search results:`, results);
             
             if (results && Array.isArray(results)) {
                 // Filter and transform results
@@ -71,7 +71,7 @@
                 console.log(`No valid results found for "${query}"`);
             }
         } catch (error) {
-            console.error(`Error searching Pixabay:`, error);
+            console.error(`Error searching for images:`, error);
             searchError = error.message || 'Failed to search for images';
             if (!selectedImage) {
                 searchResults = [];

@@ -2,9 +2,9 @@
     import { basket } from '../stores/basket.js';
     import { getContext } from 'svelte';
     
-    // Get services from context
+    // Get services from context with generic names
     const services = getContext('services') || {};
-    const { firebase } = services;
+    const { database } = services;
     
     // Exported props
     export let showModal = false;
@@ -68,8 +68,8 @@
             // Make a deep copy of the basket items
             const basketItems = JSON.parse(JSON.stringify($basket));
 
-            // Save the meal to Firestore using the firebase service from the container
-            const mealId = await firebase.saveSubmittedMeal(basketItems, timestamp);
+            // Save the meal to database using the database service from the container
+            const mealId = await database.saveSubmittedMeal(basketItems, timestamp);
             
             if (mealId) {
                 // Show confirmation
