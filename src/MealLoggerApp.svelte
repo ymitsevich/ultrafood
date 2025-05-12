@@ -235,7 +235,7 @@
     
     // Function to backup database data
     async function backupData() {
-        if (!database.isFirebaseAvailable()) {
+        if (!database.isAvailable()) {
             alert($language === 'ru' ? 
                 'Резервное копирование недоступно в локальном режиме' : 
                 'Backup not available in local-only mode');
@@ -248,7 +248,7 @@
         
         try {
             // Call the backup function
-            backupResult = await database.backupFirestoreData();
+            backupResult = await database.backupData();
             console.log('Backup completed:', backupResult);
         } catch (error) {
             console.error('Error during backup:', error);
@@ -373,7 +373,7 @@
         }
         
         // If not in local-only mode, also update all submitted meals containing this food item
-        if (database.isFirebaseAvailable()) {
+        if (database.isAvailable()) {
             try {
                 // Show loading state or notification
                 const updateStatus = document.createElement('div');
