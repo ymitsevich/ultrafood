@@ -1,6 +1,6 @@
 <script>
     import './styles/main.css';
-    import { getFoodData } from './foodData.js';
+    // import { getFoodData } from './foodData.js'; - Removed this import
     import { foodDefaults } from './stores/foodDefaults.js';
     import { basket } from './stores/basket.js';
     import { language, t } from './stores/language.js';
@@ -28,6 +28,19 @@
     
     // Menu state
     let showMenu = false;
+    
+    // Function to get initial food data with empty categories - moved from foodData.js
+    function getFoodData() {
+        return {
+            fruit: [],
+            vegetables: [],
+            proteins: [],
+            grains: [],
+            dairy: [],
+            snacks: [],
+            drinks: [],
+        };
+    }
     
     // Food data and category state
     let foodData = getFoodData();
