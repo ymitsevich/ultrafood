@@ -2,6 +2,68 @@ import { DatabaseService } from './interfaces/DatabaseService.js';
 import { generateMealId } from '../utils.js';
 
 /**
+ * Default seed data for testing environments
+ */
+export const DEFAULT_SEED_DATA = {
+  foodItems: [
+    {
+      id: 'apple-test-123456',
+      name: 'Apple',
+      calories: 52,
+      category: 'fruits',
+      defaultAmount: '100g',
+      image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/apple.jpg',
+      updatedAt: '2025-01-01T12:00:00.000Z'
+    },
+    {
+      id: 'chicken-breast-test-123457',
+      name: 'Chicken Breast',
+      calories: 165,
+      category: 'meat',
+      defaultAmount: '100g',
+      image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/chicken.jpg',
+      updatedAt: '2025-01-01T12:00:00.000Z'
+    },
+    {
+      id: 'brown-rice-test-123458',
+      name: 'Brown Rice',
+      calories: 112,
+      category: 'grains',
+      defaultAmount: '100g',
+      image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/rice.jpg',
+      updatedAt: '2025-01-01T12:00:00.000Z'
+    }
+  ],
+  meals: [
+    {
+      id: 'meal_test_1',
+      timestamp: '2025-01-01T08:00:00.000Z',
+      submittedAt: '2025-01-01T08:05:00.000Z',
+      items: [
+        {
+          id: 'apple-test-123456',
+          name: 'Apple',
+          calories: 52,
+          category: 'fruits',
+          defaultAmount: '100g',
+          image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/apple.jpg',
+          amount: '1'
+        },
+        {
+          id: 'chicken-breast-test-123457',
+          name: 'Chicken Breast',
+          calories: 165,
+          category: 'meat',
+          defaultAmount: '100g',
+          image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/chicken.jpg',
+          amount: '100g'
+        }
+      ]
+    }
+  ]
+};
+
+/**
  * In-memory implementation of the DatabaseService interface
  * This is a simple example to demonstrate how different implementations
  * can adhere to the same contract/interface
@@ -11,6 +73,60 @@ export class InMemoryDatabaseService extends DatabaseService {
     super();
     this.foodItems = [];
     this.meals = [];
+    
+    // Auto-seed in test environment
+    if (process.env.NODE_ENV === 'test') {
+      this.seed();
+    }
+  }
+
+  /**
+   * Seed the database with test data
+   * @param {Object} seedData - Data to populate the database with
+   * @param {Array} seedData.foodItems - Food items to seed
+   * @param {Array} seedData.meals - Meals to seed
+   * @param {boolean} clearExisting - Whether to clear existing data before seeding
+   * @returns {Object} Summary of seeded data
+   */
+  seed(seedData = DEFAULT_SEED_DATA, clearExisting = true) {
+    if (clearExisting) {
+      this.foodItems = [];
+      this.meals = [];
+    }
+    
+    if (seedData.foodItems && Array.isArray(seedData.foodItems)) {
+      this.foodItems.push(...JSON.parse(JSON.stringify(seedData.foodItems)));
+    }
+    
+    if (seedData.meals && Array.isArray(seedData.meals)) {
+      this.meals.push(...JSON.parse(JSON.stringify(seedData.meals)));
+    }
+    
+    console.log(`[InMemoryDatabaseService] Seeded with ${this.foodItems.length} food items and ${this.meals.length} meals`);
+    
+    return {
+      foodItemsCount: this.foodItems.length,
+      mealsCount: this.meals.length,
+      timestamp: new Date().toISOString()
+    };
+  }
+  
+  /**
+   * Clear all data from the database
+   * @returns {Object} Summary of cleared data
+   */
+  clearAll() {
+    const summary = {
+      foodItemsCount: this.foodItems.length,
+      mealsCount: this.meals.length,
+      timestamp: new Date().toISOString()
+    };
+    
+    this.foodItems = [];
+    this.meals = [];
+    
+    console.log('[InMemoryDatabaseService] All data cleared');
+    return summary;
   }
 
   /**

@@ -9,6 +9,7 @@ services:
       - .:/app:rw
       - /app/node_modules  # Prevent overwriting node_modules with host directory
     environment:
+#      NODE_ENV: test
       NODE_ENV: development
       CHOKIDAR_USEPOLLING: true
       # Playwright specific environment variables
