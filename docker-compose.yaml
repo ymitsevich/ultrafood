@@ -9,8 +9,9 @@ services:
       - .:/app:rw
       - /app/node_modules  # Prevent overwriting node_modules with host directory
     environment:
+      NODE_ENV: ${NODE_ENV} # Pass the NODE_ENV variable from the host
 #      NODE_ENV: test
-      NODE_ENV: development
+#      NODE_ENV: development
       CHOKIDAR_USEPOLLING: true
       # Playwright specific environment variables
       PLAYWRIGHT_BROWSERS_PATH: /ms-playwright

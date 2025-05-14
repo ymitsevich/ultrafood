@@ -15,4 +15,4 @@ RUN npx playwright install chromium --with-deps
 # Copy the rest of the application AFTER installing dependencies
 COPY . .
 
-CMD ["npm", "run", "dev"]
+#CMD ["npm", "run", "dev"]
