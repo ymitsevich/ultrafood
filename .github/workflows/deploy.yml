@@ -78,6 +78,8 @@ jobs:
 
       - name: Start Docker services
         run: docker compose up -d
+        env:
+          NODE_ENV: test
 
       - name: Wait for services to be ready
         run: sleep 10
