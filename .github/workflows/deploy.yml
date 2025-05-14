@@ -84,11 +84,14 @@ jobs:
 
       - name: Build application in container
         run: docker compose exec -T frontend npm run build
+        env:
+          NODE_ENV: test
 
       - name: Run Playwright tests in container
         run: docker compose exec -T frontend npm run test
         env:
           CI: true
+          NODE_ENV: test
 
       - name: Save test reports
         if: always()

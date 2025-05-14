@@ -278,7 +278,7 @@ export class FirebaseDatabaseService extends DatabaseService {
           // Continue from the last document (next page)
           mealsQuery = query(
             collection(this.db, "submitted-meals"),
-            orderBy("submittedAt", "desc"),
+            orderBy("timestamp", "desc"),
             limit(pageSize),
             startAfter(lastVisible)
           );
@@ -286,7 +286,7 @@ export class FirebaseDatabaseService extends DatabaseService {
           // First page
           mealsQuery = query(
             collection(this.db, "submitted-meals"),
-            orderBy("submittedAt", "desc"),
+            orderBy("timestamp", "desc"),
             limit(pageSize)
           );
         }

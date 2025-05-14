@@ -1,6 +1,21 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 
+// Debug environment information
+console.log('----------------------------------------');
+console.log('Environment Debug Information:');
+console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+console.log(`Environment: ${process.env.NODE_ENV === 'production' ? 'prod' : (process.env.NODE_ENV === 'development' ? 'dev' : 'test')}`);
+
+// Check for .env variables to determine which file is loaded
+// This assumes your .env and .env.test files have some distinct variables or values
+console.log('\nEnvironment file detection:');
+// List some key environment variables that might help identify which file is loaded
+console.log('ENV_FILE:', process.env.ENV_FILE || 'not specified');
+// You can add more env vars to check as needed
+console.log('Using file:', process.env.ENV_FILE ? (process.env.ENV_FILE.includes('test') ? '.env.test' : '.env') : 'Unable to determine');
+console.log('----------------------------------------');
+
 // Debug test to examine the UI behavior
 test('Debug UI elements and interactions', async ({ page }) => {
   // Navigate to the app
