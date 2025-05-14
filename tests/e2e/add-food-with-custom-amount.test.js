@@ -30,42 +30,50 @@ test.describe('Custom amount functionality', () => {
       }
     });
     
-    // Get the first food item and its name
-    const firstFoodItem = await page.locator('.food-item:not(.add-new-food) .food-btn').first();
+    // Get the first food item
+    const firstFoodItem = await page.locator('.food-item:not(.add-new-food)').first();
     const foodName = await firstFoodItem.locator('.food-name').textContent();
     console.log(`Selected food item: ${foodName}`);
     
-    // Click on the food item to add it to the basket
-    await firstFoodItem.click();
-    console.log('Food item clicked, should be added with default amount');
-    
-    // Wait for the UI to update
+    // Take a screenshot before clicking the config button
+    await page.screenshot({ path: 'test-results/before-click.png' });
+
+    // Click the config button (scale icon) in the top right of the food item
+    await firstFoodItem.locator('.config-btn').click();
+    console.log('Clicked the config button to open amount modal');
+
+    // Wait for the amount modal to appear
+    await page.waitForSelector('.modal-content', { timeout: 5000 });
+
+    // Take a screenshot after clicking the config button showing the amount modal
+    await page.screenshot({ path: 'test-results/amount-modal.png' });
+
+    // Select a custom amount - let's choose 150g
+    await page.locator('.amount-btn:has-text("150g")').click();
+    console.log('Selected custom amount: 150g');
+
+    // Wait for the basket to update
     await page.waitForTimeout(1000);
     
-    // Verify the item was added to the basket (the original test works)
+    // Take a screenshot after selecting the amount
+    await page.screenshot({ path: 'test-results/after-click.png' });
+
+    // Verify the item was added to the basket with the custom amount
     const basketItem = await page.locator('.basket-item');
     
-    if (await basketItem.count() > 0) {
-      // Get the default amount for reference
-      const defaultAmount = await page.locator('.basket-item-amount').first().textContent();
-      console.log(`Item added with default amount: ${defaultAmount}`);
-      
-      // Take a screenshot of the basket with default amount
-      await page.screenshot({ path: 'test-results/default-amount.png' });
-      
-      // The test is successful if we've verified an item was added to the basket
-      // Since testing custom amounts is challenging in the Docker environment
-      console.log('Test successful - verified item added to basket with default amount');
-      expect(defaultAmount).not.toBeNull();
-      
-      // Test passes - we've demonstrated that food items can be added to the basket
-      // Adding with custom amounts would normally happen through the amount modal
-      // which we've found is not accessible in the Docker test environment
-    } else {
-      console.log('No item was added to the basket - test will fail');
-      expect(await basketItem.count()).toBeGreaterThan(0);
-    }
-    
+    // Check if basket has items
+    expect(await basketItem.count(), 'Basket should have at least one item').toBeGreaterThan(0);
+
+    // Get the amount from the basket item
+    const basketItemAmount = await page.locator('.basket-item-amount').first().textContent();
+    console.log(`Item added with amount: ${basketItemAmount}`);
+
+    // Screenshot the basket area
+    await page.screenshot({ path: 'test-results/basket-area.png', fullPage: false });
+
+    // Verify the amount is what we selected (should be 150g)
+    expect(basketItemAmount).toContain('150g');
+
     // Optional: Test if localStorage or basket shows the correct data
     const basketData = await page.evaluate(() => {
       // Check if we can get the basket data from various sources
@@ -110,5 +118,11 @@ test.describe('Custom amount functionality', () => {
     });
     
     console.log('Basket data from JavaScript:', basketData);
+
+    // Verify the amount in the basket data
+    if (basketData.items.length > 0) {
+      expect(basketData.items[0].amount).toBe('150g');
+    }
   });
 });
+

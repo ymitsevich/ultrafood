@@ -9,7 +9,7 @@ NODE_ENV = NODE_ENV
 
 run-test:
 	NODE_ENV=test $(DOCKER_COMPOSE) up -d
-	NODE_ENV=test $(DOCKER_COMPOSE) exec -T frontend npm run test
+	NODE_ENV=test $(DOCKER_COMPOSE) exec frontend npm run test
 	$(DOCKER_COMPOSE) down
 
 .PHONY: run-local
