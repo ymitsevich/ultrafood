@@ -95,6 +95,14 @@ export class DatabaseService {
   }
 
   /**
+   * Exports collections as downloadable data
+   * @returns {Promise<Object>} Promise resolving to { foodItems, meals }
+   */
+  async exportCollections() {
+    throw new Error('Method exportCollections() must be implemented');
+  }
+
+  /**
    * Checks if the database service is available
    * @returns {boolean} True if the database service is available
    */

@@ -321,6 +321,16 @@ export class InMemoryDatabaseService extends DatabaseService {
   /**
    * @inheritdoc
    */
+  async exportCollections() {
+    return {
+      foodItems: [...this.foodItems],
+      meals: [...this.meals]
+    };
+  }
+
+  /**
+   * @inheritdoc
+   */
   isAvailable() {
     return true; // In-memory is always available
   }

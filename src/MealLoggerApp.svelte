@@ -84,14 +84,25 @@
             action: openLanguageModal
         },
         {
+            type: 'divider' // Add a divider before the Logged Meals option
+        },
+        {
             icon: '📋',
             label: () => t('loggedMeals'),
             action: openSubmittedMealsModal
         },
         {
+            type: 'divider' // Add a divider after the Logged Meals option
+        },
+        {
             icon: '💾',
             label: () => $language === 'ru' ? 'Резервное копирование' : 'Backup Data',
             action: backupData
+        },
+        {
+            icon: '⬇️',
+            label: () => $language === 'ru' ? 'Скачать данные' : 'Export Data',
+            action: exportData
         }
     ];
     
@@ -564,6 +575,78 @@
             showAddCategoryModal = false;
         }
     }
+    
+    // Function to export data
+    async function exportData() {
+        if (!database.isAvailable()) {
+            alert($language === 'ru' ? 
+                'Экспорт данных недоступен в локальном режиме' : 
+                'Export not available in local-only mode');
+            return;
+        }
+        
+        try {
+            // Show loading notification
+            showNotification($language === 'ru' ? 'Экспорт данных...' : 'Exporting data...');
+            
+            // Get all data to export
+            const { foodItems, meals } = await database.exportCollections();
+            
+            // Create a single combined JSON file for download with both collections
+            const combinedData = {
+                foodItems: foodItems || [],
+                submittedMeals: meals || []
+            };
+            
+            // Generate timestamp for the filename
+            const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+            
+            if ((foodItems && foodItems.length > 0) || (meals && meals.length > 0)) {
+                // Download the combined data as a single file
+                downloadJsonFile(
+                    combinedData, 
+                    `meal-logger-export-${timestamp}.json`
+                );
+                
+                // Show success notification
+                showNotification(
+                    $language === 'ru' 
+                        ? `Данные успешно экспортированы (${foodItems?.length || 0} продуктов, ${meals?.length || 0} приемов пищи)` 
+                        : `Data exported successfully (${foodItems?.length || 0} food items, ${meals?.length || 0} meals)`
+                );
+            } else {
+                showNotification(
+                    $language === 'ru' 
+                        ? 'Нет данных для экспорта' 
+                        : 'No data to export', 
+                    'error'
+                );
+            }
+        } catch (error) {
+            console.error('Error during export:', error);
+            showNotification($language === 'ru' ? 'Ошибка экспорта данных' : 'Error exporting data', 'error');
+        }
+    }
+    
+    // Helper function to download data as a JSON file
+    function downloadJsonFile(data, filename) {
+        const jsonString = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create a temporary link element
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        
+        // Append to the document, click it to trigger download, then remove it
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the URL object
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
 </script>
 
 <div class="meal-logger">
@@ -583,6 +666,9 @@
             >
                 {t('recent')}
             </button>
+            
+            <!-- Category separator -->
+            <div class="category-separator"></div>
             
             <!-- Show all regular categories with items -->
             {#each Object.entries(foodData).filter(([cat, items]) => items.length > 0 && cat !== RECENT_CATEGORY) as [category, _]}
@@ -946,6 +1032,16 @@
         font-size: 16px;
         padding: 8px 14px;
         color: #7E7E7E;
+    }
+
+    /* New styles for category separator */
+    .category-separator {
+        width: 2px;
+        background-color: #e0e0e0;
+        height: 24px;
+        align-self: center;
+        margin: 0 10px;
+        border-radius: 1px;
     }
 
     /* Loading state */

@@ -83,6 +83,7 @@ export class FirebaseDatabaseService extends DatabaseService {
     this.deleteSubmittedMeal = this.deleteSubmittedMeal.bind(this);
     this.updateSubmittedMealsWithFoodItem = this.updateSubmittedMealsWithFoodItem.bind(this);
     this.backupData = this.backupData.bind(this);
+    this.exportCollections = this.exportCollections.bind(this);
     this.isAvailable = this.isAvailable.bind(this);
   }
   
@@ -606,6 +607,49 @@ export class FirebaseDatabaseService extends DatabaseService {
         message: `Backup failed: ${error.message}`
       };
     }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  async exportCollections() {
+    let foodItems = [];
+    let meals = [];
+    
+    // Try to get data from Firestore first
+    if (this.db && this.isFirebaseInitialized) {
+      try {
+        // Get all food items
+        const foodItemsSnapshot = await getDocs(collection(this.db, "food-items"));
+        foodItems = foodItemsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        // Get all submitted meals (no pagination)
+        const mealsSnapshot = await getDocs(collection(this.db, "submitted-meals"));
+        meals = mealsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        console.log(`Retrieved ${foodItems.length} food items and ${meals.length} meals for export`);
+      } catch (error) {
+        console.error("Error fetching data for export:", error);
+        // Fall back to local data
+      }
+    }
+    
+    // If Firestore failed or isn't available, use local data
+    if (foodItems.length === 0) {
+      foodItems = [...this.localFoodItems];
+    }
+    
+    if (meals.length === 0) {
+      meals = [...this.localSubmittedMeals];
+    }
+    
+    return { foodItems, meals };
   }
 
   /**
