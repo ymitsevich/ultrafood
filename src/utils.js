@@ -88,5 +88,9 @@ export function formatDateForId(date = null) {
  */
 export function generateMealId(prefix = 'meal', timestamp = null) {
   const dateStr = formatDateForId(timestamp);
-  return `${prefix}-${dateStr}`;
+  
+  // Add a random suffix (3 characters) to prevent duplicate IDs for meals submitted at the same time
+  const randomSuffix = Math.random().toString(36).substring(2, 5);
+  
+  return `${prefix}-${dateStr}-${randomSuffix}`;
 }
