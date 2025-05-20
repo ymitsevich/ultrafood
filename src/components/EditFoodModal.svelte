@@ -24,7 +24,7 @@
     let foodName = "";
     let imageSearchQuery = ""; 
     let selectedCategory = "";
-    let calories = ""; // Added calories field
+    let calories = "";
     let fileInput;
     let nameInput;
     let imageData = null;
@@ -36,15 +36,27 @@
     let initialized = false;
     let lastFoodItemId = null;
     
-    // Only initialize the form when the modal opens or a different food item is provided
-    $: if (showModal && foodItem && (!initialized || lastFoodItemId !== foodItem.id)) {
+    // Initialize form when modal opens or food item changes
+    $: if (shouldInitializeForm(showModal, foodItem, initialized, lastFoodItemId)) {
+        initializeForm();
+    }
+    
+    // Check if the form should be initialized
+    function shouldInitializeForm(isModalShown, food, isInitialized, lastId) {
+        return isModalShown && food && (!isInitialized || lastId !== food.id);
+    }
+    
+    // Initialize form with food item data
+    function initializeForm() {
+        if (!foodItem) return;
+        
         console.log("Initializing edit modal with food item:", foodItem);
         
         // Initialize form fields
         foodName = foodItem.name || "";
         imageSearchQuery = foodItem.name || "";
         selectedCategory = foodItem.category || "";
-        calories = foodItem.calories || ""; // Load existing calories
+        calories = foodItem.calories || "";
         imageData = null;
         
         // Set the image if available
@@ -75,7 +87,7 @@
         foodName = "";
         imageSearchQuery = "";
         selectedCategory = "";
-        calories = ""; // Reset calories field
+        calories = "";
         imageData = null;
         imageBlob = null;
         isUploading = false;
@@ -92,7 +104,7 @@
         resetForm();
     }
 
-    // Update image search based on the current food name (only when requested)
+    // Update image search based on the current food name
     function updateImageSearch() {
         imageSearchQuery = foodName;
     }
@@ -103,30 +115,20 @@
         console.log("Selected Pixabay image:", image);
     }
 
-    // Handle image file selection with resizing and compression
+    // Handle image file selection
     async function handleImageSelect(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         try {
-            // Create a preview of the original image first
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                // Show original image while processing
-                imageData = e.target.result;
+            // Show original image while processing
+            imageData = await readFileAsDataURL(file);
                 
-                // Process the image (resize and compress)
-                const processedBlob = await resizeAndCompressImage(file);
-                imageBlob = processedBlob;
-                
-                // Update the preview with the processed image
-                const processedReader = new FileReader();
-                processedReader.onload = (pe) => {
-                    imageData = pe.target.result;
-                };
-                processedReader.readAsDataURL(processedBlob);
-            };
-            reader.readAsDataURL(file);
+            // Process the image (resize and compress)
+            imageBlob = await resizeAndCompressImage(file);
+            
+            // Update preview with processed image
+            imageData = await readFileAsDataURL(imageBlob);
             
             // Reset the selected Pixabay image if user uploads their own
             selectedPixabayImage = null;
@@ -136,35 +138,31 @@
         }
     }
     
+    // Read file as data URL for preview
+    function readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(e);
+            reader.readAsDataURL(file);
+        });
+    }
+    
     // Resize, crop to square, and compress an image file
     async function resizeAndCompressImage(file) {
         return new Promise((resolve, reject) => {
-            // Create an image to get dimensions
             const img = new Image();
             const objectUrl = URL.createObjectURL(file);
             
             img.onload = () => {
-                // Clean up object URL
                 URL.revokeObjectURL(objectUrl);
                 
                 // Size configuration
-                const TARGET_SIZE = 500; // Target size for the square image
-                const FINAL_SIZE = 500;  // Final output size
+                const TARGET_SIZE = 500;
+                const FINAL_SIZE = 500;
                 
-                // Calculate dimensions for cropping to a square
-                let sourceX, sourceY, sourceSize;
-                
-                if (img.width > img.height) {
-                    // Landscape image - crop from center width
-                    sourceSize = img.height;
-                    sourceX = Math.floor((img.width - sourceSize) / 2);
-                    sourceY = 0;
-                } else {
-                    // Portrait image - crop from center height
-                    sourceSize = img.width;
-                    sourceX = 0;
-                    sourceY = Math.floor((img.height - sourceSize) / 2);
-                }
+                // Calculate crop dimensions
+                const cropData = getCropDimensions(img.width, img.height);
                 
                 // Create canvas for cropping and resizing
                 const canvas = document.createElement('canvas');
@@ -173,18 +171,16 @@
                 
                 // Draw the cropped and resized image on canvas
                 const ctx = canvas.getContext('2d');
-                
-                // Apply some basic anti-aliasing by setting the smoothing quality
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
                 
                 // Draw the image with cropping and resizing
                 ctx.drawImage(
                     img,
-                    sourceX, sourceY,       // Source position (x, y) - where to start cropping
-                    sourceSize, sourceSize, // Source dimensions - the square to crop
-                    0, 0,                   // Destination position (always 0,0)
-                    FINAL_SIZE, FINAL_SIZE  // Destination size - our final square size
+                    cropData.sourceX, cropData.sourceY,
+                    cropData.sourceSize, cropData.sourceSize,
+                    0, 0,
+                    FINAL_SIZE, FINAL_SIZE
                 );
                 
                 // Convert to blob with compression
@@ -197,8 +193,8 @@
                             reject(new Error("Failed to compress image"));
                         }
                     },
-                    'image/jpeg', // Convert to JPEG format for better compression
-                    0.85 // Quality: 0.85 offers good balance between quality and file size
+                    'image/jpeg',
+                    0.85
                 );
             };
             
@@ -210,11 +206,27 @@
             img.src = objectUrl;
         });
     }
+    
+    // Calculate dimensions for cropping to square
+    function getCropDimensions(width, height) {
+        if (width > height) {
+            // Landscape image
+            const sourceSize = height;
+            const sourceX = Math.floor((width - sourceSize) / 2);
+            const sourceY = 0;
+            return { sourceX, sourceY, sourceSize };
+        } else {
+            // Portrait image
+            const sourceSize = width;
+            const sourceX = 0;
+            const sourceY = Math.floor((height - sourceSize) / 2);
+            return { sourceX, sourceY, sourceSize };
+        }
+    }
 
     // Handle form submission
     async function handleSubmit() {
         if (!foodName.trim()) {
-            // Focus on name input if empty
             nameInput.focus();
             return;
         }
@@ -223,44 +235,20 @@
         uploadError = null;
 
         try {
-            let imageUrl = foodItem.imageUrl || foodItem.image;
-            
-            // Upload new image if selected
-            if (selectedPixabayImage && selectedPixabayImage.id !== foodItem.id) {
-                // Use the smallest image URL available
-                const smallImageUrl = selectedPixabayImage.smallImageUrl || selectedPixabayImage.previewURL;
-                imageBlob = await fetchImageAsBlob(smallImageUrl);
-                imageUrl = await uploadImage(imageBlob, foodName);
-            } else if (imageBlob) {
-                imageUrl = await uploadImage(imageBlob, foodName);
-            }
+            const imageUrl = await processAndUploadImage();
             
             if (!imageUrl) {
                 throw new Error("Failed to process image");
             }
 
             // Create the updated food item
-            const updatedFood = {
-                id: foodItem.id, // Keep the same ID
-                name: foodName.trim(),
-                category: selectedCategory || foodItem.category,
-                image: imageUrl,
-                calories: calories ? parseInt(calories, 10) : null, // Add calories to the food item
-                // Preserve other properties
-                ...Object.fromEntries(
-                    Object.entries(foodItem).filter(([key]) => 
-                        !['id', 'name', 'category', 'image', 'imageUrl', 'calories'].includes(key)
-                    )
-                )
-            };
+            const updatedFood = createUpdatedFoodItem(imageUrl);
 
             // Save the food item to Firebase
             await saveFoodItem(updatedFood);
             
-            // Notify parent component
+            // Notify parent component and close modal
             if (onSave) onSave(updatedFood);
-            
-            // Close the modal and reset form
             closeModal();
             
         } catch (error) {
@@ -270,13 +258,49 @@
             isUploading = false;
         }
     }
+    
+    // Process and upload the selected image
+    async function processAndUploadImage() {
+        // Default to existing image URL
+        let imageUrl = foodItem.imageUrl || foodItem.image;
+        
+        // Upload new image if selected
+        if (selectedPixabayImage && selectedPixabayImage.id !== foodItem.id) {
+            // Use the smallest image URL available
+            const smallImageUrl = selectedPixabayImage.smallImageUrl || selectedPixabayImage.previewURL;
+            imageBlob = await fetchImageAsBlob(smallImageUrl);
+            imageUrl = await uploadImage(imageBlob, foodName);
+        } else if (imageBlob) {
+            imageUrl = await uploadImage(imageBlob, foodName);
+        }
+        
+        return imageUrl;
+    }
+    
+    // Create updated food item object
+    function createUpdatedFoodItem(imageUrl) {
+        return {
+            id: foodItem.id, // Keep the same ID
+            name: foodName.trim(),
+            category: selectedCategory || foodItem.category,
+            image: imageUrl,
+            calories: calories ? parseInt(calories, 10) : null,
+            // Preserve other properties
+            ...Object.fromEntries(
+                Object.entries(foodItem).filter(([key]) => 
+                    !['id', 'name', 'category', 'image', 'imageUrl', 'calories'].includes(key)
+                )
+            )
+        };
+    }
 
     // Handle delete confirmation
     function handleDeleteConfirmation() {
+        confirmDeleteMode = !confirmDeleteMode;
+        
         if (confirmDeleteMode) {
-            handleDelete();
-        } else {
-            confirmDeleteMode = true;
+            // Don't automatically delete, just enter confirmation mode
+            return;
         }
     }
 

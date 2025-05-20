@@ -4,8 +4,10 @@
     // Props for controlling modal visibility
     export let showModal = false;
 
-    // Current language
+    // Current language state from store
     let selectedLanguage;
+    
+    // Subscribe to language store and update local state
     language.subscribe(value => {
         selectedLanguage = value;
     });
@@ -15,8 +17,10 @@
         showModal = false;
     }
 
-    // Apply selected language
+    // Apply selected language and close modal
     function applyLanguage() {
+        if (!selectedLanguage) return;
+        
         language.set(selectedLanguage);
         closeModal();
     }

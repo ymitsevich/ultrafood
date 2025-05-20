@@ -20,21 +20,34 @@
     // Update selectedImageId when selectedImage changes (from parent)
     $: if (selectedImage) {
         selectedImageId = selectedImage.id;
+    } else {
+        selectedImageId = null;
     }
     
-    // Perform search whenever searchQuery changes (with debounce)
-    $: if (searchQuery && searchQuery.length >= 3) {
+    // Handle search query changes with debounce
+    $: {
+        handleSearchQueryChange(searchQuery);
+    }
+    
+    // Handle search query changes
+    function handleSearchQueryChange(query) {
         clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => {
-            performSearch(searchQuery);
-        }, 500); // Debounce 500ms
-    } else if (searchQuery.length < 3 && !selectedImage) {
-        clearTimeout(searchTimer);
-        searchResults = [];
+        
+        // Early return if query is too short and no image is selected
+        if (!query || query.length < 3) {
+            if (!selectedImage) {
+                searchResults = [];
+            }
+            return;
+        }
+        
+        // Debounce the search for 500ms
+        searchTimer = setTimeout(() => performSearch(query), 500);
     }
     
     // Perform the actual search
     async function performSearch(query) {
+        // Early return if query is too short
         if (!query || query.length < 3) return;
         
         isSearching = true;
@@ -42,42 +55,52 @@
         
         try {
             console.log(`Searching for food images: "${query}"`);
-            const results = await imageSearch.searchImages(query);
-            console.log(`Raw search results:`, results);
-            
-            if (results && Array.isArray(results)) {
-                // Filter and transform results
-                searchResults = results.map(img => ({
-                    id: img.id,
-                    smallImageUrl: img.thumbnailUrl || img.smallImageUrl,
-                    width: img.width,
-                    height: img.height,
-                    tags: img.tags
-                }));
-                
-                // Remove the selected image from search results to avoid duplicates
-                if (selectedImage) {
-                    searchResults = searchResults.filter(img => img.id !== selectedImage.id);
-                }
-                
-                console.log(`Found ${searchResults.length} valid images for "${query}"`);
-            } else {
-                // Don't clear results if we have a selected image
-                if (!selectedImage) {
-                    searchResults = [];
-                } else {
-                    searchResults = [];
-                }
-                console.log(`No valid results found for "${query}"`);
-            }
+            const results = await fetchSearchResults(query);
+            processSearchResults(results);
         } catch (error) {
-            console.error(`Error searching for images:`, error);
-            searchError = error.message || 'Failed to search for images';
-            if (!selectedImage) {
-                searchResults = [];
-            }
+            handleSearchError(error);
         } finally {
             isSearching = false;
+        }
+    }
+    
+    // Fetch search results from the image service
+    async function fetchSearchResults(query) {
+        return await imageSearch.searchImages(query);
+    }
+    
+    // Process the search results
+    function processSearchResults(results) {
+        if (!results || !Array.isArray(results)) {
+            searchResults = [];
+            console.log(`No valid results found for "${searchQuery}"`);
+            return;
+        }
+        
+        // Transform and filter results
+        searchResults = results.map(img => ({
+            id: img.id,
+            smallImageUrl: img.thumbnailUrl || img.smallImageUrl,
+            width: img.width,
+            height: img.height,
+            tags: img.tags
+        }));
+        
+        // Remove the selected image from search results to avoid duplicates
+        if (selectedImage) {
+            searchResults = searchResults.filter(img => img.id !== selectedImage.id);
+        }
+        
+        console.log(`Found ${searchResults.length} valid images for "${searchQuery}"`);
+    }
+    
+    // Handle search errors
+    function handleSearchError(error) {
+        console.error(`Error searching for images:`, error);
+        searchError = error.message || 'Failed to search for images';
+        
+        if (!selectedImage) {
+            searchResults = [];
         }
     }
     

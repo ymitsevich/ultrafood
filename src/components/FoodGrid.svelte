@@ -10,38 +10,46 @@
     export let foodItems = [];
     export let onConfigClick;
     export let onAddNewFood;
-    export let onEditFood; // Prop for opening the edit modal
-    export let isVirtualCategory = false; // Prop to identify virtual categories like "Recent"
+    export let onEditFood;
+    export let isVirtualCategory = false; // For virtual categories like "Recent"
     
-    // Track loading state of images
+    // Track UI state
     let loadingImages = {};
     let addedToBasket = {};
     
     onMount(() => {
-        // Initialize loading state for all images
+        initializeLoadingState();
+        preloadImages();
+    });
+    
+    // Initialize loading state for all images
+    function initializeLoadingState() {
         foodItems.forEach(item => {
-            if (item.imageUrl || item.image || item.imageData) {
+            if (hasImage(item)) {
                 loadingImages[item.id] = true;
             }
         });
-        
-        // Pre-load images to avoid loading indicator flashes for cached images
-        preloadImages();
-    });
+    }
+    
+    // Check if food item has image
+    function hasImage(item) {
+        return item.imageUrl || item.image || item.imageData;
+    }
+    
+    // Get image source for a food item
+    function getImageSource(item) {
+        return item.imageUrl || item.image || item.imageData;
+    }
     
     // Preload images to check if they are already cached
     function preloadImages() {
         foodItems.forEach(item => {
-            if (item.imageUrl || item.image) {
-                const imgSrc = item.imageUrl || item.image;
-                const img = new Image();
-                img.onload = () => imageLoaded(item.id);
-                img.src = imgSrc;
-            } else if (item.imageData) {
-                const img = new Image();
-                img.onload = () => imageLoaded(item.id);
-                img.src = item.imageData;
-            }
+            const imgSrc = getImageSource(item);
+            if (!imgSrc) return;
+            
+            const img = new Image();
+            img.onload = () => imageLoaded(item.id);
+            img.src = imgSrc;
         });
     }
     
@@ -57,28 +65,37 @@
         const amount = getFoodDefaultAmount(item.id);
         basket.add({ ...item, amount });
         
-        // Show animation feedback
-        addedToBasket[item.id] = true;
+        showAddedAnimation(item.id);
+    }
+    
+    // Show animation feedback when adding to basket
+    function showAddedAnimation(foodId) {
+        addedToBasket[foodId] = true;
         setTimeout(() => {
-            addedToBasket[item.id] = false;
+            addedToBasket[foodId] = false;
         }, 1000);
     }
     
     // Get default amount for a food item
     function getFoodDefaultAmount(foodId) {
         const food = foodItems.find(item => item.id === foodId);
-        // First try to get the defaultAmount stored in the food item from Firebase
-        // If not found, fall back to the local store with 50g default
-        return food?.defaultAmount || $foodDefaults[foodId]?.amount || '50g';
+        
+        // Priority order: 
+        // 1. Amount stored in food item from Firebase
+        // 2. Amount in local foodDefaults store
+        // 3. Default fallback value
+        return food?.defaultAmount || 
+               $foodDefaults[foodId]?.amount || 
+               '50g';
     }
     
-    // Handle config button click (now adds to basket with default amount)
+    // Handle config button click (adds to basket with default amount)
     function handleConfigClick(e, food) {
         e.stopPropagation();
         addToBasket(food);
     }
 
-    // Handle food button click (now opens amount modal)
+    // Handle food button click (opens amount modal)
     function handleFoodClick(food) {
         onConfigClick(food);
     }
@@ -86,9 +103,9 @@
     // Handle edit button click to open edit modal
     function handleEditClick(e, food) {
         e.stopPropagation();
-        if (onEditFood) {
-            onEditFood(food);
-        }
+        if (!onEditFood) return;
+        
+        onEditFood(food);
     }
 </script>
 
@@ -101,22 +118,13 @@
                     on:click={() => handleFoodClick(food)}
                 >
                     <div class="food-visual">
-                        {#if food.imageUrl || food.image}
+                        {#if hasImage(food)}
                             {#if loadingImages[food.id]}
                                 <div class="loading-placeholder"></div>
                             {/if}
                             <div 
                                 class="food-image" 
-                                style="background-image: url('{food.imageUrl || food.image}')" 
-                                class:hidden={loadingImages[food.id]}
-                            ></div>
-                        {:else if food.imageData}
-                            {#if loadingImages[food.id]}
-                                <div class="loading-placeholder"></div>
-                            {/if}
-                            <div 
-                                class="food-image" 
-                                style="background-image: url('{food.imageData}')" 
+                                style="background-image: url('{getImageSource(food)}')" 
                                 class:hidden={loadingImages[food.id]}
                             ></div>
                         {:else}
@@ -378,6 +386,11 @@
         justify-content: center;
         font-size: 16px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
     }
 </style>
 

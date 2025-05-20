@@ -26,72 +26,92 @@
         showModal = false;
     }
     
-    // Set time to 20 minutes earlier
-    function set20minEarlier() {
+    // Helper functions for timestamp creation
+    function getCurrentTimestamp() {
+        return new Date().toISOString();
+    }
+    
+    function getTimestampWithOffset(offsetMinutes) {
         const date = new Date();
-        date.setMinutes(date.getMinutes() - 20);
+        date.setMinutes(date.getMinutes() + offsetMinutes);
         return date.toISOString();
     }
     
-    // Set time to 1 hour earlier
-    function set1hourEarlier() {
-        const date = new Date();
-        date.setHours(date.getHours() - 1);
-        return date.toISOString();
+    function getCustomTimestamp(date, time) {
+        return new Date(`${date}T${time || '12:00'}`).toISOString();
+    }
+    
+    // Get timestamp based on selected option
+    function getTimestampForOption(timeOption) {
+        switch (timeOption) {
+            case 'now':
+                return getCurrentTimestamp();
+            case '20min':
+                return getTimestampWithOffset(-20);
+            case '1hour':
+                return getTimestampWithOffset(-60);
+            case 'custom':
+                if (!customDate) {
+                    throw new Error($i18n('selectDateError'));
+                }
+                return getCustomTimestamp(customDate, customTime);
+            default:
+                return getCurrentTimestamp();
+        }
     }
 
     // Handle meal submission with specific time
     async function submitWithTime(timeOption) {
+        // Early return if basket is empty
         if ($basket.length === 0) return;
 
-        let timestamp;
         submissionInProgress = true;
         submissionError = null;
 
         try {
-            // Format the timestamp based on selection
-            if (timeOption === 'now') {
-                timestamp = new Date().toISOString();
-            } else if (timeOption === '20min') {
-                timestamp = set20minEarlier();
-            } else if (timeOption === '1hour') {
-                timestamp = set1hourEarlier();
-            } else if (timeOption === 'custom') {
-                if (!customDate) {
-                    submissionError = $i18n('selectDateError');
-                    submissionInProgress = false;
-                    return;
-                }
-                
-                const timeValue = customTime || '12:00';
-                timestamp = new Date(`${customDate}T${timeValue}`).toISOString();
+            // Get timestamp based on selected option
+            let timestamp;
+            try {
+                timestamp = getTimestampForOption(timeOption);
+            } catch (error) {
+                submissionError = error.message;
+                submissionInProgress = false;
+                return;
             }
 
             // Make a deep copy of the basket items
             const basketItems = JSON.parse(JSON.stringify($basket));
 
-            // Save the meal to database using the database service from the container
+            // Save the meal to database
             const mealId = await database.saveSubmittedMeal(basketItems, timestamp);
             
-            if (mealId) {
-                // Clear basket and close modal
-                basket.clear();
-                closeModal();
-                
-                // Call the callback to refresh submitted meals
-                onMealSubmitted();
-
-                // Show success notification
-                showNotification($i18n('mealLoggedTime', {time: formatTimeForDisplay(timestamp)}), 'success');
-            } else {
+            if (!mealId) {
                 submissionError = $i18n('errorSaving');
+                return;
             }
+            
+            // Success path
+            handleSuccessfulSubmission(timestamp);
+            
         } catch (error) {
             console.error("Error submitting meal:", error);
             submissionError = $i18n('errorUnexpected');
         } finally {
             submissionInProgress = false;
         }
+    }
+    
+    // Handle successful submission
+    function handleSuccessfulSubmission(timestamp) {
+        // Clear basket and close modal
+        basket.clear();
+        closeModal();
+        
+        // Call the callback to refresh submitted meals
+        onMealSubmitted();
+
+        // Show success notification
+        showNotification($i18n('mealLoggedTime', {time: formatTimeForDisplay(timestamp)}), 'success');
     }
     
     // Format time for user display
