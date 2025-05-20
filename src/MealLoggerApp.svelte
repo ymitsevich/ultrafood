@@ -763,7 +763,9 @@
         foodItem={editingFood}
         onSave={handleSaveEditedFood}
         onDelete={handleDeleteFood}
-        categories={Object.keys(foodData).filter(cat => cat !== RECENT_CATEGORY)}
+        categories={Object.entries(foodData)
+            .filter(([cat, items]) => items.length > 0 && cat !== RECENT_CATEGORY)
+            .map(([cat]) => cat)}
     />
     <!-- Edit Meal Modal -->
     <EditMealModal
