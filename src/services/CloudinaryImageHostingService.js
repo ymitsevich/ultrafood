@@ -20,6 +20,21 @@ export class CloudinaryImageHostingService extends ImageHostingService {
   }
 
   /**
+   * Sanitize a string to be used as a filename or ID
+   * Removes or replaces special characters that could cause problems in URLs or APIs
+   * @param {string} name - The filename to sanitize
+   * @returns {string} - The sanitized filename
+   * @private
+   */
+  sanitizeFilename(name) {
+    if (!name) return "";
+    // Replace special characters with underscores
+    return name.trim()
+        .replace(/[&+/\\#,+()$~%'":*?<>{}]/g, '_')
+        .replace(/\s+/g, '_');
+  }
+
+  /**
    * @inheritdoc
    */
   async uploadImage(imageBlob, itemId, options = {}) {
@@ -27,7 +42,10 @@ export class CloudinaryImageHostingService extends ImageHostingService {
     formData.append('file', imageBlob);
     formData.append('upload_preset', this.CLOUDINARY_UPLOAD_PRESET);
     formData.append('folder', 'food-images');
-    formData.append('public_id', itemId);
+    
+    // Sanitize the itemId to avoid issues with special characters
+    const sanitizedId = this.sanitizeFilename(itemId);
+    formData.append('public_id', sanitizedId);
     
     try {
       const response = await fetch(

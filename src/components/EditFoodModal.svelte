@@ -37,6 +37,16 @@
     let lastFoodItemId = null;
     let newTagInput = ""; // For adding new tags
     
+    // Sanitize a string to be used as a filename or ID
+    // Removes or replaces special characters that could cause problems in URLs or APIs
+    function sanitizeFilename(name) {
+        if (!name) return "";
+        // Replace special characters with underscores
+        return name.trim()
+            .replace(/[&+/\\#,+()$~%'":*?<>{}]/g, '_')
+            .replace(/\s+/g, '_');
+    }
+    
     // Initialize form when modal opens or food item changes
     $: if (shouldInitializeForm(showModal, foodItem, initialized, lastFoodItemId)) {
         initializeForm();
@@ -273,9 +283,11 @@
             // Use the smallest image URL available
             const smallImageUrl = selectedPixabayImage.smallImageUrl || selectedPixabayImage.previewURL;
             imageBlob = await fetchImageAsBlob(smallImageUrl);
-            imageUrl = await uploadImage(imageBlob, foodName);
+            // Use sanitized filename for image upload
+            imageUrl = await uploadImage(imageBlob, sanitizeFilename(foodName));
         } else if (imageBlob) {
-            imageUrl = await uploadImage(imageBlob, foodName);
+            // Use sanitized filename for image upload
+            imageUrl = await uploadImage(imageBlob, sanitizeFilename(foodName));
         }
         
         return imageUrl;
