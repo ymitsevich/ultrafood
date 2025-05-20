@@ -1,5 +1,6 @@
 <script>
     import { onMount, getContext } from 'svelte';
+    import { language, t, i18n } from '../stores/language.js';
     
     // Get services from context with generic names
     const services = getContext('services') || {};
@@ -47,7 +48,7 @@
         
         // Validate that we have at least one food item
         if (!editedMeal.items || editedMeal.items.length === 0) {
-            errorMessage = 'A meal must contain at least one food item';
+            errorMessage = $i18n('errorSaving');
             return;
         }
         
@@ -65,7 +66,7 @@
             closeModal();
         } catch (error) {
             console.error('Error updating meal:', error);
-            errorMessage = 'Failed to update the meal: ' + error.message;
+            errorMessage = $i18n('errorSaving') + ': ' + error.message;
         } finally {
             isLoading = false;
         }
@@ -89,7 +90,7 @@
             closeModal();
         } catch (error) {
             console.error('Error deleting meal:', error);
-            errorMessage = 'Failed to delete the meal: ' + error.message;
+            errorMessage = $i18n('errorDeleting') + ': ' + error.message;
         } finally {
             isLoading = false;
         }
@@ -117,7 +118,7 @@
     <div class="modal">
         <div class="modal-content edit-meal-modal">
             <span class="close-modal" on:click={closeModal}>&times;</span>
-            <h2>Edit Meal</h2>
+            <h2>{$i18n('editMeal')}</h2>
             
             <!-- Meal timestamp -->
             <div class="meal-timestamp">
@@ -126,7 +127,7 @@
             
             <!-- Meal items -->
             <div class="meal-items-container">
-                <h3>Food Items</h3>
+                <h3>{$i18n('foodItems')}</h3>
                 {#if editedMeal.items && editedMeal.items.length > 0}
                     {#each editedMeal.items as item, index (index)}
                         <div class="meal-item">
@@ -157,7 +158,7 @@
                     {/each}
                 {:else}
                     <div class="empty-items">
-                        <p>This meal has no items. Add at least one food item or delete the meal.</p>
+                        <p>{$i18n('noMealItems')}</p>
                     </div>
                 {/if}
             </div>
@@ -178,7 +179,7 @@
                             on:click={() => confirmDelete = true}
                             disabled={isLoading}
                         >
-                            Delete Meal
+                            {$i18n('deleteMeal')}
                         </button>
                     {:else}
                         <button 
@@ -186,27 +187,27 @@
                             on:click={deleteMeal}
                             disabled={isLoading}
                         >
-                            Confirm Delete
+                            {$i18n('confirmDelete')}
                         </button>
                         <button 
                             class="cancel-delete-btn" 
                             on:click={() => confirmDelete = false}
                             disabled={isLoading}
                         >
-                            Cancel
+                            {$i18n('cancel')}
                         </button>
                     {/if}
                 </div>
                 <div class="right-actions">
                     <button class="cancel-btn" on:click={closeModal} disabled={isLoading}>
-                        Cancel
+                        {$i18n('cancel')}
                     </button>
                     <button 
                         class="save-btn" 
                         on:click={saveMeal}
                         disabled={isLoading || confirmDelete || !editedMeal.items || editedMeal.items.length === 0}
                     >
-                        {isLoading ? 'Saving...' : 'Save Changes'}
+                        {isLoading ? $i18n('saving') : $i18n('saveChanges')}
                     </button>
                 </div>
             </div>

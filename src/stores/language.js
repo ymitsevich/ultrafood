@@ -88,6 +88,8 @@ export const translations = {
         editMeal: 'Edit Meal',
         deleteMeal: 'Delete Meal',
         confirmDelete: 'Confirm Delete',
+        saveChanges: 'Save Changes',
+        noMealItems: 'This meal has no items. Add at least one food item or delete the meal.',
         
         // Submitted meals
         loggedMeals: 'Your Logged Meals',
@@ -195,6 +197,8 @@ export const translations = {
         editMeal: 'Редактировать прием пищи',
         deleteMeal: 'Удалить прием пищи',
         confirmDelete: 'Подтвердить удаление',
+        saveChanges: 'Сохранить изменения',
+        noMealItems: 'В этом приеме пищи нет элементов. Добавьте хотя бы один продукт или удалите прием пищи.',
         
         // Submitted meals
         loggedMeals: 'Ваши приемы пищи',
