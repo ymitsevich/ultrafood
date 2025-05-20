@@ -48,7 +48,7 @@
     // Recent foods special virtual category
     const RECENT_CATEGORY = "recent";
     let recentFoods = []; // Will store recent foods
-    const MAX_RECENT_ITEMS = 20; // Maximum number of recent items to display
+    const MAX_RECENT_ITEMS = 40; // Maximum number of recent items to display (doubled from 20 to 40)
     
     // Set recent as default category
     let currentCategory = RECENT_CATEGORY;
@@ -64,7 +64,7 @@
     let submittedMeals = [];
     let isLoadingMeals = false;
     let mealLoadError = null;
-    const MEALS_PER_PAGE = 5; // Increased from 3 for better UX
+    const MEALS_PER_PAGE = 20; // Increased from 5 to 20 to provide more recent food items
     let showSubmittedMealsModal = false;
     
     // Language modal state
