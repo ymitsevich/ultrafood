@@ -1,6 +1,7 @@
 <script>
     import { foodDefaults } from '../stores/foodDefaults.js';
     import { basket } from '../stores/basket.js';
+    import { language, t, i18n } from '../stores/language.js';
     
     export let selectedFood = null;
     export let showModal = false;
@@ -55,15 +56,15 @@
                 <button class="amount-btn" on:click={() => saveAndClose('40g')}>40g</button>
                 <button class="amount-btn" on:click={() => saveAndClose('50g')}>50g</button>
                 <button class="amount-btn" on:click={() => saveAndClose('60g')}>60g</button>
-                <button class="amount-btn" on:click={() => saveAndClose('1 piece')}>1 piece</button>
+                <button class="amount-btn" on:click={() => saveAndClose('1 piece')}>1 {$i18n('piece')}</button>
             </div>
             <div class="custom-amount">
                 <input 
                     type="text" 
                     bind:value={customAmount} 
-                    placeholder="Custom amount..." 
+                    placeholder={$i18n('customAmount')} 
                 />
-                <button on:click={setCustomAmount} class="custom-amount-btn">Add</button>
+                <button on:click={setCustomAmount} class="custom-amount-btn">{$i18n('add')}</button>
             </div>
         </div>
     </div>

@@ -1,6 +1,7 @@
 <script>
     import { basket } from '../stores/basket.js';
     import { getContext } from 'svelte';
+    import { language, t, i18n } from '../stores/language.js';
     
     // Get services from context with generic names
     const services = getContext('services') || {};
@@ -57,7 +58,7 @@
                 timestamp = set1hourEarlier();
             } else if (timeOption === 'custom') {
                 if (!customDate) {
-                    submissionError = "Please select a date";
+                    submissionError = $i18n('selectDateError');
                     submissionInProgress = false;
                     return;
                 }
@@ -81,13 +82,13 @@
                 onMealSubmitted();
 
                 // Show success notification
-                showNotification(`Meal logged for ${formatTimeForDisplay(timestamp)}`, 'success');
+                showNotification($i18n('mealLoggedTime', {time: formatTimeForDisplay(timestamp)}), 'success');
             } else {
-                submissionError = "Failed to save meal. Please try again.";
+                submissionError = $i18n('errorSaving');
             }
         } catch (error) {
             console.error("Error submitting meal:", error);
-            submissionError = "An unexpected error occurred.";
+            submissionError = $i18n('errorUnexpected');
         } finally {
             submissionInProgress = false;
         }
@@ -110,28 +111,28 @@
         <div class="modal-content">
             <span class="close-modal" on:click={closeModal}>&times;</span>
             
-            <h2>When did you eat this?</h2>
+            <h2>{$i18n('whenDidYouEat')}</h2>
             
             <div class="time-options">
                 <div class="time-buttons-grid">
                     <button class="time-btn" on:click={() => submitWithTime('now')}>
-                        Now
+                        {$i18n('now')}
                     </button>
                     <button class="time-btn" on:click={() => submitWithTime('20min')}>
-                        20min earlier
+                        {$i18n('twentyMinAgo')}
                     </button>
                     <button class="time-btn" on:click={() => submitWithTime('1hour')}>
-                        1hr earlier
+                        {$i18n('oneHourAgo')}
                     </button>
                     <button class="time-btn custom-time-btn" on:click={showCustomTimeInput}>
-                        Custom time
+                        {$i18n('custom')}
                     </button>
                 </div>
                 
                 {#if selectedTime === 'custom'}
                     <div class="custom-time-inputs">
                         <div class="input-group">
-                            <label for="date-input">Date:</label>
+                            <label for="date-input">{$i18n('chooseDate')}:</label>
                             <input 
                                 type="date" 
                                 id="date-input"
@@ -141,7 +142,7 @@
                         </div>
                         
                         <div class="input-group">
-                            <label for="time-input">Time:</label>
+                            <label for="time-input">{$i18n('chooseTime')}:</label>
                             <input 
                                 type="time" 
                                 id="time-input"
@@ -155,9 +156,9 @@
                             disabled={submissionInProgress || !customDate}
                         >
                             {#if submissionInProgress}
-                                Submitting...
+                                {$i18n('submitting')}
                             {:else}
-                                Submit
+                                {$i18n('submit')}
                             {/if}
                         </button>
                     </div>

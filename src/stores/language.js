@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 
 // Available languages
 export const languages = {
@@ -45,6 +45,9 @@ export const translations = {
         amount: 'Amount',
         save: 'Save',
         cancel: 'Cancel',
+        customAmount: 'Custom amount...',
+        add: 'Add',
+        piece: 'piece',
         
         // Add food modal
         addFood: 'Add Food',
@@ -57,8 +60,13 @@ export const translations = {
         defaultAmount: 'Default Amount',
         
         // Edit food modal
-        editFood: 'Edit Food',
-        deleteFood: 'Delete Food',
+        editFood: 'Edit Food Item',
+        deleteFood: 'Delete',
+        calories: 'Calories (per 100g)',
+        enterCalories: 'Enter calories per 100g',
+        currentImage: 'Current Image',
+        newCustomImage: 'New Custom Image',
+        saving: 'Saving...',
         
         // Time modal
         logMeal: 'Log Meal',
@@ -69,6 +77,12 @@ export const translations = {
         chooseDate: 'Choose date',
         chooseTime: 'Choose time',
         submit: 'Submit',
+        submitting: 'Submitting...',
+        whenDidYouEat: 'When did you eat this?',
+        selectDateError: 'Please select a date',
+        errorSaving: 'Failed to save meal. Please try again.',
+        errorUnexpected: 'An unexpected error occurred.',
+        mealLoggedTime: 'Meal logged for {time}',
         
         // Edit meal modal
         editMeal: 'Edit Meal',
@@ -84,7 +98,6 @@ export const translations = {
         // Categories modal
         categoryName: 'Category Name',
         enterCategoryName: 'Enter category name',
-        addCategory: 'Add Category',
         
         // Language modal
         languageSettings: 'Language Settings',
@@ -98,7 +111,29 @@ export const translations = {
         errorSaving: 'Failed to save.',
         errorDeleting: 'Failed to delete.',
         localModeActive: 'Local Mode: Changes will not be saved to the cloud.',
-        cloudStorageHint: 'To enable cloud storage: create a Firestore database and set LOCAL_ONLY_MODE=false in firebase.js'
+        cloudStorageHint: 'To enable cloud storage: create a Firestore database and set LOCAL_ONLY_MODE=false in firebase.js',
+        
+        // Backup modal
+        dataBackup: 'Data Backup',
+        creatingBackup: 'Creating backup...',
+        backupCompleted: 'Backup Completed!',
+        backupPrefix: 'Backup prefix:',
+        foodItems: 'Food Items:',
+        meals: 'Meals:',
+        backupFailed: 'Backup Failed',
+        
+        // Export/import
+        exportData: 'Export Data',
+        exportingData: 'Exporting data...',
+        importData: 'Import Data',
+        importSuccessful: 'Import successful! Added:',
+        foodItemsImported: 'food items',
+        mealsImported: 'meals',
+        importFailed: 'Import failed',
+        errorExporting: 'Error exporting data',
+        
+        // Menu
+        menu: 'Menu'
     },
     ru: {
         // Categories
@@ -117,6 +152,9 @@ export const translations = {
         amount: 'Количество',
         save: 'Сохранить',
         cancel: 'Отмена',
+        customAmount: 'Своё количество...',
+        add: 'Добавить',
+        piece: 'шт.',
         
         // Add food modal
         addFood: 'Добавить продукт',
@@ -130,7 +168,12 @@ export const translations = {
         
         // Edit food modal
         editFood: 'Редактировать продукт',
-        deleteFood: 'Удалить продукт',
+        deleteFood: 'Удалить',
+        calories: 'Калории (на 100г)',
+        enterCalories: 'Введите калории на 100г',
+        currentImage: 'Текущее изображение',
+        newCustomImage: 'Новое изображение',
+        saving: 'Сохранение...',
         
         // Time modal
         logMeal: 'Записать прием пищи',
@@ -141,6 +184,12 @@ export const translations = {
         chooseDate: 'Выберите дату',
         chooseTime: 'Выберите время',
         submit: 'Сохранить',
+        submitting: 'Сохранение...',
+        whenDidYouEat: 'Когда вы ели это?',
+        selectDateError: 'Пожалуйста, выберите дату',
+        errorSaving: 'Не удалось сохранить прием пищи. Попробуйте еще раз.',
+        errorUnexpected: 'Произошла неожиданная ошибка.',
+        mealLoggedTime: 'Прием пищи записан для {time}',
         
         // Edit meal modal
         editMeal: 'Редактировать прием пищи',
@@ -156,7 +205,6 @@ export const translations = {
         // Categories modal
         categoryName: 'Название категории',
         enterCategoryName: 'Введите название категории',
-        addCategory: 'Добавить категорию',
         
         // Language modal
         languageSettings: 'Настройки языка',
@@ -170,7 +218,29 @@ export const translations = {
         errorSaving: 'Ошибка сохранения.',
         errorDeleting: 'Ошибка удаления.',
         localModeActive: 'Локальный режим: Изменения не будут сохранены в облаке.',
-        cloudStorageHint: 'Для включения облачного хранилища: создайте базу данных Firestore и установите LOCAL_ONLY_MODE=false в firebase.js'
+        cloudStorageHint: 'Для включения облачного хранилища: создайте базу данных Firestore и установите LOCAL_ONLY_MODE=false в firebase.js',
+        
+        // Backup modal
+        dataBackup: 'Резервное копирование',
+        creatingBackup: 'Создание резервной копии...',
+        backupCompleted: 'Резервное копирование выполнено!',
+        backupPrefix: 'Префикс резервной копии:',
+        foodItems: 'Продукты:',
+        meals: 'Приемы пищи:',
+        backupFailed: 'Ошибка резервного копирования',
+        
+        // Export/import
+        exportData: 'Скачать данные',
+        exportingData: 'Экспорт данных...',
+        importData: 'Импорт данных',
+        importSuccessful: 'Импорт успешен! Добавлено:',
+        foodItemsImported: 'продуктов',
+        mealsImported: 'приемов пищи',
+        importFailed: 'Ошибка импорта',
+        errorExporting: 'Ошибка экспорта данных',
+        
+        // Menu
+        menu: 'Меню'
     }
 };
 
@@ -209,7 +279,7 @@ export const language = {
     }
 };
 
-// Create a derived translation function
+// Create a derived translation function that can be used directly
 export function t(key, replacements = {}) {
     let currentLang;
     language.subscribe(value => {
@@ -218,3 +288,8 @@ export function t(key, replacements = {}) {
     
     return language.t(key, currentLang, replacements);
 }
+
+// Create a derived store that automatically returns translated text based on the current language
+export const i18n = derived(language, $language => {
+    return (key, replacements = {}) => language.t(key, $language, replacements);
+});

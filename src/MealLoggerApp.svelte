@@ -3,7 +3,7 @@
     // import { getFoodData } from './foodData.js'; - Removed this import
     import { foodDefaults } from './stores/foodDefaults.js';
     import { basket } from './stores/basket.js';
-    import { language, t } from './stores/language.js';
+    import { language, t, i18n } from './stores/language.js';
     import { onMount, setContext } from 'svelte';
     import { fly } from 'svelte/transition'; // Import the fly transition
     
@@ -80,7 +80,7 @@
     let menuItems = [
         {
             icon: '🌐',
-            label: () => $language === 'ru' ? 'Настройки языка' : 'Language Settings',
+            label: () => $i18n('languageSettings'),
             action: openLanguageModal
         },
         {
@@ -88,7 +88,7 @@
         },
         {
             icon: '📋',
-            label: () => t('loggedMeals'),
+            label: () => $i18n('loggedMeals'),
             action: openSubmittedMealsModal
         },
         {
@@ -96,12 +96,12 @@
         },
         {
             icon: '💾',
-            label: () => $language === 'ru' ? 'Резервное копирование' : 'Backup Data',
+            label: () => $i18n('dataBackup'),
             action: backupData
         },
         {
             icon: '⬇️',
-            label: () => $language === 'ru' ? 'Скачать данные' : 'Export Data',
+            label: () => $i18n('exportData'),
             action: exportData
         }
     ];
@@ -286,9 +286,7 @@
     // Function to backup database data
     async function backupData() {
         if (!database.isAvailable()) {
-            alert($language === 'ru' ? 
-                'Резервное копирование недоступно в локальном режиме' : 
-                'Backup not available in local-only mode');
+            alert($i18n('localModeActive'));
             return;
         }
         
@@ -579,15 +577,13 @@
     // Function to export data
     async function exportData() {
         if (!database.isAvailable()) {
-            alert($language === 'ru' ? 
-                'Экспорт данных недоступен в локальном режиме' : 
-                'Export not available in local-only mode');
+            alert($i18n('localModeActive'));
             return;
         }
         
         try {
             // Show loading notification
-            showNotification($language === 'ru' ? 'Экспорт данных...' : 'Exporting data...');
+            showNotification($i18n('exportingData'));
             
             // Get all data to export
             const { foodItems, meals } = await database.exportCollections();
@@ -610,21 +606,17 @@
                 
                 // Show success notification
                 showNotification(
-                    $language === 'ru' 
-                        ? `Данные успешно экспортированы (${foodItems?.length || 0} продуктов, ${meals?.length || 0} приемов пищи)` 
-                        : `Data exported successfully (${foodItems?.length || 0} food items, ${meals?.length || 0} meals)`
+                    $i18n('importSuccessful') + ` (${foodItems?.length || 0} ${$i18n('foodItemsImported')}, ${meals?.length || 0} ${$i18n('mealsImported')})`
                 );
             } else {
                 showNotification(
-                    $language === 'ru' 
-                        ? 'Нет данных для экспорта' 
-                        : 'No data to export', 
+                    $i18n('importFailed'), 
                     'error'
                 );
             }
         } catch (error) {
             console.error('Error during export:', error);
-            showNotification($language === 'ru' ? 'Ошибка экспорта данных' : 'Error exporting data', 'error');
+            showNotification($i18n('errorExporting'), 'error');
         }
     }
     
@@ -871,32 +863,32 @@
         <div class="modal">
             <div class="modal-content backup-modal">
                 <span class="close-modal" on:click={() => showBackupModal = false}>&times;</span>
-                <h2>{$language === 'ru' ? 'Резервное копирование' : 'Data Backup'}</h2>
+                <h2>{$i18n('dataBackup')}</h2>
 
                 {#if isBackingUp}
                     <div class="backup-loading">
                         <div class="loading-spinner"></div>
-                        <p>{$language === 'ru' ? 'Создание резервной копии...' : 'Creating backup...'}</p>
+                        <p>{$i18n('creatingBackup')}</p>
                     </div>
                 {:else if backupResult}
                     <div class="backup-result {backupResult.success ? 'success' : 'error'}">
                         {#if backupResult.success}
                             <div class="success-icon">✓</div>
-                            <h3>{$language === 'ru' ? 'Резервное копирование выполнено!' : 'Backup Completed!'}</h3>
-                            <p>{$language === 'ru' ? 'Префикс резервной копии:' : 'Backup prefix:'} <code>{backupResult.prefix}</code></p>
+                            <h3>{$i18n('backupCompleted')}</h3>
+                            <p>{$i18n('backupPrefix')} <code>{backupResult.prefix}</code></p>
                             <div class="backup-stats">
                                 <div class="stat-item">
-                                    <span class="stat-label">{$language === 'ru' ? 'Продукты:' : 'Food Items:'}</span>
+                                    <span class="stat-label">{$i18n('foodItems')}</span>
                                     <span class="stat-value">{backupResult.foodItemsCount}</span>
                                 </div>
                                 <div class="stat-item">
-                                    <span class="stat-label">{$language === 'ru' ? 'Приемы пищи:' : 'Meals:'}</span>
+                                    <span class="stat-label">{$i18n('meals')}</span>
                                     <span class="stat-value">{backupResult.mealsCount}</span>
                                 </div>
                             </div>
                         {:else}
                             <div class="error-icon">✗</div>
-                            <h3>{$language === 'ru' ? 'Ошибка резервного копирования' : 'Backup Failed'}</h3>
+                            <h3>{$i18n('backupFailed')}</h3>
                             <p>{backupResult.message}</p>
                         {/if}
                     </div>
@@ -907,7 +899,7 @@
                         class="close-btn"
                         on:click={() => showBackupModal = false}
                     >
-                        {$language === 'ru' ? 'Закрыть' : 'Close'}
+                        {$i18n('cancel')}
                     </button>
                 </div>
             </div>

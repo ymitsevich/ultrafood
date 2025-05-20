@@ -2,6 +2,7 @@
     import { onMount, getContext } from "svelte";
     import { generateFoodId } from "../utils.js";
     import PixabayImageSearch from "./PixabayImageSearch.svelte";
+    import { language, t, i18n } from "../stores/language.js";
 
     // Get services from context with generic names
     const services = getContext('services') || {};
@@ -308,29 +309,29 @@
         <div class="modal-content">
             <span class="close-modal" on:click={closeModal}>&times;</span>
             
-            <h2>Edit Food Item</h2>
+            <h2>{$i18n('editFood')}</h2>
             
             <div class="form-group">
-                <label for="food-name">Food Name:</label>
+                <label for="food-name">{$i18n('foodName')}:</label>
                 <input
                     id="food-name"
                     type="text"
                     bind:value={foodName}
                     bind:this={nameInput}
-                    placeholder="Enter food name"
+                    placeholder={$i18n('foodName')}
                 />
                 <button 
                     type="button" 
                     class="search-with-name-btn" 
                     on:click={updateImageSearch}
-                    title="Search for images using this name"
+                    title={$i18n('searchImage')}
                 >
                     🔍
                 </button>
             </div>
             
             <div class="form-group">
-                <label for="food-category">Category:</label>
+                <label for="food-category">{$i18n('category')}:</label>
                 <select id="food-category" bind:value={selectedCategory}>
                     {#each categories as category}
                         <option value={category}>{category.charAt(0).toUpperCase() + category.slice(1)}</option>
@@ -339,12 +340,12 @@
             </div>
             
             <div class="form-group">
-                <label for="food-calories">Calories (per 100g):</label>
+                <label for="food-calories">{$i18n('calories')}:</label>
                 <input
                     id="food-calories"
                     type="number"
                     bind:value={calories}
-                    placeholder="Enter calories per 100g"
+                    placeholder={$i18n('enterCalories')}
                     min="0"
                     step="1"
                 />
@@ -353,7 +354,7 @@
             <!-- Current image display -->
             {#if (foodItem.imageUrl || foodItem.image) && !imageData && !selectedPixabayImage}
                 <div class="current-image">
-                    <div class="preview-label">Current Image:</div>
+                    <div class="preview-label">{$i18n('currentImage')}:</div>
                     <div class="image-preview">
                         <img src={foodItem.imageUrl || foodItem.image} alt={foodItem.name} />
                     </div>
@@ -378,13 +379,13 @@
             
             <div class="upload-button-container">
                 <button type="button" class="upload-btn" on:click={() => fileInput.click()}>
-                    Upload Custom Image
+                    {$i18n('uploadImage')}
                 </button>
             </div>
             
             {#if imageData}
                 <div class="custom-image-preview">
-                    <div class="preview-label">New Custom Image:</div>
+                    <div class="preview-label">{$i18n('newCustomImage')}:</div>
                     <div class="image-preview">
                         <img src={imageData} alt="Food preview" />
                     </div>
@@ -399,20 +400,20 @@
                 <div class="left-actions">
                     {#if !confirmDeleteMode}
                         <button type="button" on:click={handleDeleteConfirmation} class="delete-btn">
-                            Delete
+                            {$i18n('deleteFood')}
                         </button>
                     {:else}
                         <button type="button" on:click={handleDelete} class="confirm-delete-btn">
-                            Confirm Delete
+                            {$i18n('confirmDelete')}
                         </button>
                         <button type="button" on:click={() => confirmDeleteMode = false} class="cancel-delete-btn">
-                            Cancel
+                            {$i18n('cancel')}
                         </button>
                     {/if}
                 </div>
                 <div class="right-actions">
                     <button type="button" on:click={closeModal} class="cancel-btn">
-                        Cancel
+                        {$i18n('cancel')}
                     </button>
                     <button
                         type="button"
@@ -420,7 +421,7 @@
                         class="submit-btn"
                         disabled={isUploading || !foodName.trim() || confirmDeleteMode}
                     >
-                        {isUploading ? 'Saving...' : 'Save Changes'}
+                        {isUploading ? $i18n('saving') : $i18n('save')}
                     </button>
                 </div>
             </div>

@@ -1,5 +1,5 @@
 <script>
-    import { language, t } from '../stores/language.js';
+    import { language, t, i18n } from '../stores/language.js';
     
     // Props: modal control, loading state and results
     export let show = false;
@@ -15,7 +15,19 @@
     function formatDate(dateStr) {
         try {
             const date = new Date(dateStr.replace('backup_', ''));
-            return date.toLocaleDateString($language === 'ru' ? 'ru-RU' : 'en-US');
+            // Get current language and select appropriate locale
+            let currentLang;
+            language.subscribe(value => {
+                currentLang = value;
+            })();
+            
+            // Map language code to locale
+            const localeMap = {
+                'en': 'en-US',
+                'ru': 'ru-RU'
+            };
+            
+            return date.toLocaleDateString(localeMap[currentLang] || 'en-US');
         } catch (e) {
             return dateStr;
         }
@@ -30,7 +42,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h3>
-                {$language === 'ru' ? 'Резервное копирование' : 'Backup Data'}
+                {$i18n('dataBackup')}
             </h3>
             <button class="close-button" on:click={handleClose}>×</button>
         </div>
@@ -39,37 +51,29 @@
             {#if isLoading}
                 <div class="loading-state">
                     <div class="spinner"></div>
-                    <p>{$language === 'ru' ? 'Создание резервной копии...' : 'Creating backup...'}</p>
+                    <p>{$i18n('creatingBackup')}</p>
                 </div>
             {:else if result}
                 {#if result.success}
                     <div class="success-state">
                         <div class="success-icon">✓</div>
-                        <p>
-                            {$language === 'ru' 
-                                ? 'Резервная копия успешно создана!' 
-                                : 'Backup successfully created!'}
-                        </p>
+                        <p>{$i18n('backupCompleted')}</p>
                         <div class="backup-details">
                             <p>
-                                <strong>{$language === 'ru' ? 'Дата:' : 'Date:'}</strong> {formatDate(result.prefix)}
+                                <strong>{$i18n('backupPrefix')}</strong> {formatDate(result.prefix)}
                             </p>
                             <p>
-                                <strong>{$language === 'ru' ? 'Продукты:' : 'Food Items:'}</strong> {result.foodItemsCount}
+                                <strong>{$i18n('foodItems')}</strong> {result.foodItemsCount}
                             </p>
                             <p>
-                                <strong>{$language === 'ru' ? 'Приёмы пищи:' : 'Meals:'}</strong> {result.mealsCount}
+                                <strong>{$i18n('meals')}</strong> {result.mealsCount}
                             </p>
                         </div>
                     </div>
                 {:else}
                     <div class="error-state">
                         <div class="error-icon">✗</div>
-                        <p>
-                            {$language === 'ru' 
-                                ? 'Не удалось создать резервную копию' 
-                                : 'Failed to create backup'}
-                        </p>
+                        <p>{$i18n('backupFailed')}</p>
                         {#if result.message}
                             <p class="error-message">{result.message}</p>
                         {/if}
@@ -77,9 +81,7 @@
                 {/if}
             {:else}
                 <p>
-                    {$language === 'ru'
-                        ? 'Эта функция создаст резервную копию всех данных в Firebase с префиксом текущей даты.'
-                        : 'This will backup all data in Firebase with the current date as prefix.'}
+                    {$i18n('cloudStorageHint')}
                 </p>
             {/if}
         </div>
@@ -87,7 +89,7 @@
         <div class="modal-footer">
             {#if !isLoading}
                 <button class="primary-button" on:click={handleClose}>
-                    {$language === 'ru' ? 'Закрыть' : 'Close'}
+                    {$i18n('cancel')}
                 </button>
             {/if}
         </div>

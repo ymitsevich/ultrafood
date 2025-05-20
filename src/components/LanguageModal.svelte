@@ -1,5 +1,5 @@
 <script>
-    import { language, languages, translations } from '../stores/language.js';
+    import { language, languages, translations, i18n } from '../stores/language.js';
 
     // Props for controlling modal visibility
     export let showModal = false;
@@ -25,10 +25,10 @@
 <div class="modal" class:active={showModal}>
     <div class="modal-content language-modal">
         <span class="close-modal" on:click={closeModal}>&times;</span>
-        <h2>{$language === 'ru' ? 'Настройки языка' : 'Language Settings'}</h2>
+        <h2>{$i18n('languageSettings')}</h2>
         
         <div class="form-group">
-            <label for="language-select">{$language === 'ru' ? 'Выберите язык:' : 'Select language:'}</label>
+            <label for="language-select">{$i18n('selectLanguage')}</label>
             <select id="language-select" bind:value={selectedLanguage}>
                 {#each Object.entries(languages) as [code, name]}
                     <option value={code}>{name}</option>
@@ -38,10 +38,10 @@
         
         <div class="form-actions">
             <button class="cancel-btn" on:click={closeModal}>
-                {$language === 'ru' ? 'Отмена' : 'Cancel'}
+                {$i18n('cancel')}
             </button>
             <button class="save-btn" on:click={applyLanguage}>
-                {$language === 'ru' ? 'Применить' : 'Apply'}
+                {$i18n('applyLanguage')}
             </button>
         </div>
     </div>
