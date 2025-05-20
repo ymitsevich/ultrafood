@@ -9,6 +9,7 @@
     // Exported props
     export let showModal = false;
     export let onMealSubmitted = () => {}; // Callback when meal is submitted successfully
+    export let showNotification = () => {}; // Callback to show notification
 
     // Local state
     let selectedTime = 'now';
@@ -72,16 +73,15 @@
             const mealId = await database.saveSubmittedMeal(basketItems, timestamp);
             
             if (mealId) {
-                // Show confirmation
-                const message = `Meal logged successfully for ${formatTimeForDisplay(timestamp)}`;
-                alert(message);
-                
                 // Clear basket and close modal
                 basket.clear();
                 closeModal();
                 
                 // Call the callback to refresh submitted meals
                 onMealSubmitted();
+
+                // Show success notification
+                showNotification(`Meal logged for ${formatTimeForDisplay(timestamp)}`, 'success');
             } else {
                 submissionError = "Failed to save meal. Please try again.";
             }
@@ -109,6 +109,7 @@
     <div class="modal" style="display: flex;">
         <div class="modal-content">
             <span class="close-modal" on:click={closeModal}>&times;</span>
+            
             <h2>When did you eat this?</h2>
             
             <div class="time-options">

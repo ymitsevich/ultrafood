@@ -5,13 +5,11 @@
     // Exported props
     export let onSubmitBasket;
     export let onMealSubmitted = () => {}; // Callback for when a meal is submitted successfully
+    export let showNotification = () => {}; // Callback to show notification
     
     // Get services from the nearest parent component using generic names
     const services = getContext('services') || {};
     const { database } = services;
-    
-    // Constants
-    const SUBMIT_NOW_MESSAGE = 'Logged {count} items to your meal (Now)!';
     
     // Submit basket with "Now" time option
     async function submitNow() {
@@ -31,8 +29,8 @@
             const mealId = await database.saveSubmittedMeal(basketItems, timestamp);
             
             if (mealId) {
-                // Show confirmation
-                showConfirmation($basket.length);
+                // Show notification
+                showNotification('Meal logged successfully!', 'success');
                 
                 // Clear basket after submission
                 basket.clear();
@@ -40,18 +38,13 @@
                 // Call the callback to refresh submitted meals
                 onMealSubmitted();
             } else {
-                alert('Failed to log meal. Please try again.');
+                // Show error
+                showNotification('Failed to log meal. Please try again.', 'error');
             }
         } catch (error) {
             console.error('Error submitting meal:', error);
-            alert('An unexpected error occurred.');
+            showNotification('An unexpected error occurred.', 'error');
         }
-    }
-    
-    // Display confirmation message
-    function showConfirmation(itemCount) {
-        const message = SUBMIT_NOW_MESSAGE.replace('{count}', itemCount);
-        alert(message);
     }
     
     // Remove item from basket

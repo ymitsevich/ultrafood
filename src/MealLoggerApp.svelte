@@ -5,6 +5,7 @@
     import { basket } from './stores/basket.js';
     import { language, t } from './stores/language.js';
     import { onMount, setContext } from 'svelte';
+    import { fly } from 'svelte/transition'; // Import the fly transition
     
     // Import our components
     import BasketSidebar from './BasketSidebar.svelte';
@@ -240,9 +241,34 @@
         await loadSubmittedMeals(false); // false means don't reset pagination
     }
     
+    // Notification system
+    let notification = null;
+    let notificationTimeout = null;
+    
+    // Show a notification message
+    function showNotification(message, type = 'success') {
+        // Clear any existing notification timeout
+        if (notificationTimeout) {
+            clearTimeout(notificationTimeout);
+        }
+        
+        // Set the notification
+        notification = { message, type };
+        
+        // Auto-hide after 3 seconds
+        notificationTimeout = setTimeout(() => {
+            notification = null;
+        }, 3000);
+    }
+    
     // Handle meal submission - refresh data
     function handleMealSubmitted() {
         console.log("Meal submitted, refreshing meal data...");
+        
+        // Show a success notification
+        showNotification('Meal logged successfully!');
+        
+        // Refresh meal data
         loadSubmittedMeals(true); // Reset pagination to show the newest meal
     }
     
@@ -544,6 +570,7 @@
     <BasketSidebar 
         onSubmitBasket={openTimeModal}
         onMealSubmitted={handleMealSubmitted} 
+        {showNotification}
     />
 
     <div class="main-content">
@@ -626,6 +653,7 @@
     <TimeModal
         bind:showModal={showTimeModal}
         onMealSubmitted={handleMealSubmitted}
+        {showNotification}
     />
     <AddFoodModal
         bind:showModal={showAddFoodModal}
@@ -797,6 +825,18 @@
                     </button>
                 </div>
             </div>
+        </div>
+    {/if}
+
+    <!-- Notification -->
+    {#if notification}
+        <div class="notification {notification.type}" transition:fly={{ y: 50, duration: 300 }}>
+            {#if notification.type === 'success'}
+                <div class="notification-icon">✓</div>
+            {:else if notification.type === 'error'}
+                <div class="notification-icon">✗</div>
+            {/if}
+            <div class="notification-message">{notification.message}</div>
         </div>
     {/if}
 </div>
@@ -1263,6 +1303,42 @@
         background-color: #e5e5e5;
     }
 
+    /* Notification styles */
+    .notification {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px 25px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        min-width: 280px;
+        justify-content: center;
+    }
+    
+    .notification.success {
+        background-color: #4caf50;
+        color: white;
+    }
+    
+    .notification.error {
+        background-color: #f44336;
+        color: white;
+    }
+    
+    .notification-icon {
+        font-size: 20px;
+        margin-right: 12px;
+    }
+    
+    .notification-message {
+        font-size: 16px;
+        font-weight: 500;
+    }
+    
     @media (max-width: 600px) {
         .meal-item {
             width: 100%;
