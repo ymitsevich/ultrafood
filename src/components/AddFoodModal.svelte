@@ -2,6 +2,7 @@
     import { onMount, getContext } from "svelte";
     import { generateFoodId } from "../utils.js";
     import PixabayImageSearch from "./PixabayImageSearch.svelte";
+    import { language, t, i18n } from "../stores/language.js";
 
     // Get services from context with generic names
     const services = getContext('services') || {};
@@ -27,6 +28,8 @@
     let isUploading = false;
     let uploadError = null;
     let selectedPixabayImage = null;
+    let selectedTags = []; // NEW: Using tags array instead of single category
+    let newTagInput = ""; // NEW: For adding new tags
 
     // Image resize configuration
     const IMAGE_CONFIG = {
@@ -35,6 +38,11 @@
         minQuality: 0.1,
         compressionStep: 0.1,
     };
+    
+    // Initialize with current category as the first tag
+    $: if (currentCategory && showModal && selectedTags.length === 0) {
+        selectedTags = [currentCategory];
+    }
 
     // Reset modal form to initial state
     function resetForm() {
@@ -45,6 +53,8 @@
         isUploading = false;
         uploadError = null;
         selectedPixabayImage = null;
+        selectedTags = [];
+        newTagInput = "";
     }
 
     // Close the modal and reset the form
@@ -65,97 +75,69 @@
         if (!file) return;
 
         try {
-            // Create a preview of the original image first
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                // Show original image while processing
-                imageData = e.target.result;
-                
-                // Process the image (resize and compress)
-                const processedBlob = await resizeAndCompressImage(file);
-                imageBlob = processedBlob;
-                
-                // Update the preview with the processed image
-                const processedReader = new FileReader();
-                processedReader.onload = (pe) => {
-                    imageData = pe.target.result;
-                };
-                processedReader.readAsDataURL(processedBlob);
-            };
-            reader.readAsDataURL(file);
+            // Show original image while processing
+            imageData = await readFileAsDataURL(file);
             
-            // Reset the selected Pixabay image if user uploads their own
-            selectedPixabayImage = null;
+            // Process the image (resize and compress)
+            imageBlob = await resizeAndCompressImage(file);
+            
+            // Update preview with processed image
+            imageData = await readFileAsDataURL(imageBlob);
         } catch (error) {
             console.error("Error processing image:", error);
             uploadError = "Failed to process the image";
         }
     }
     
+    // Read file as data URL for preview
+    function readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(e);
+            reader.readAsDataURL(file);
+        });
+    }
+    
     // Resize and compress an image file
     async function resizeAndCompressImage(file) {
         return new Promise((resolve, reject) => {
-            // Create an image to get dimensions
             const img = new Image();
             const objectUrl = URL.createObjectURL(file);
             
             img.onload = () => {
-                // Clean up object URL
                 URL.revokeObjectURL(objectUrl);
                 
-                // Size configuration
-                const TARGET_SIZE = 500; // Target size for the square image
-                const FINAL_SIZE = 500;  // Final output size
+                // Get dimensions for square cropping
+                const cropData = getCropDimensions(img.width, img.height);
                 
-                // Calculate dimensions for cropping to a square
-                let sourceX, sourceY, sourceSize;
-                
-                if (img.width > img.height) {
-                    // Landscape image - crop from center width
-                    sourceSize = img.height;
-                    sourceX = Math.floor((img.width - sourceSize) / 2);
-                    sourceY = 0;
-                } else {
-                    // Portrait image - crop from center height
-                    sourceSize = img.width;
-                    sourceX = 0;
-                    sourceY = Math.floor((img.height - sourceSize) / 2);
-                }
-                
-                // Create canvas for cropping and resizing
+                // Create canvas for resizing
                 const canvas = document.createElement('canvas');
-                canvas.width = FINAL_SIZE;
-                canvas.height = FINAL_SIZE;
+                canvas.width = 500;  // Target size
+                canvas.height = 500; // Target size
                 
-                // Draw the cropped and resized image on canvas
                 const ctx = canvas.getContext('2d');
-                
-                // Apply some basic anti-aliasing by setting the smoothing quality
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
                 
-                // Draw the image with cropping and resizing
+                // Draw the cropped image
                 ctx.drawImage(
-                    img,
-                    sourceX, sourceY,       // Source position (x, y) - where to start cropping
-                    sourceSize, sourceSize, // Source dimensions - the square to crop
-                    0, 0,                   // Destination position (always 0,0)
-                    FINAL_SIZE, FINAL_SIZE  // Destination size - our final square size
+                    img, 
+                    cropData.sourceX, 
+                    cropData.sourceY, 
+                    cropData.sourceSize, 
+                    cropData.sourceSize,
+                    0, 0, canvas.width, canvas.height
                 );
                 
-                // Convert to blob with compression
-                canvas.toBlob(
-                    (blob) => {
-                        if (blob) {
-                            console.log(`Image optimized: ${Math.round(blob.size / 1024)}KB (${FINAL_SIZE}x${FINAL_SIZE}px, square)`);
-                            resolve(blob);
-                        } else {
-                            reject(new Error("Failed to compress image"));
-                        }
-                    },
-                    'image/jpeg', // Convert to JPEG format for better compression
-                    0.85 // Quality: 0.85 offers good balance between quality and file size
-                );
+                // Convert to blob
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Failed to create image blob'));
+                    }
+                }, 'image/jpeg', 0.85); // Use JPEG for best compression
             };
             
             img.onerror = () => {
@@ -165,6 +147,52 @@
             
             img.src = objectUrl;
         });
+    }
+    
+    // Calculate dimensions for cropping to square
+    function getCropDimensions(width, height) {
+        if (width > height) {
+            // Landscape image
+            const sourceSize = height;
+            const sourceX = Math.floor((width - sourceSize) / 2);
+            const sourceY = 0;
+            return { sourceX, sourceY, sourceSize };
+        } else {
+            // Portrait image
+            const sourceSize = width;
+            const sourceX = 0;
+            const sourceY = Math.floor((height - sourceSize) / 2);
+            return { sourceX, sourceY, sourceSize };
+        }
+    }
+
+    // NEW: Add a new tag
+    function addTag() {
+        if (!newTagInput.trim()) return;
+        
+        // Convert to lowercase and replace spaces with underscores for consistency
+        const tagKey = newTagInput.trim().toLowerCase().replace(/\s+/g, '_');
+        
+        // Add only if it doesn't already exist in selected tags
+        if (!selectedTags.includes(tagKey)) {
+            selectedTags = [...selectedTags, tagKey];
+        }
+        
+        // Reset input
+        newTagInput = "";
+    }
+    
+    // NEW: Remove a tag
+    function removeTag(tag) {
+        selectedTags = selectedTags.filter(t => t !== tag);
+    }
+    
+    // NEW: Handle keydown in the tag input (add tag on Enter)
+    function handleTagInputKeydown(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            addTag();
+        }
     }
 
     // Handle form submission
@@ -211,7 +239,8 @@
             const newFood = {
                 id: foodId,
                 name: foodName.trim(),
-                category: currentCategory,
+                tags: selectedTags, // Use tags array for categorization
+                category: selectedTags.length > 0 ? selectedTags[0] : currentCategory, // Use first tag as category for backward compatibility
                 image: imageUrl,
                 calories: calories ? parseInt(calories, 10) : null, // Add calories to the food item
                 // Add any additional food properties here
@@ -251,7 +280,10 @@
         <div class="modal-content">
             <span class="close-modal" on:click={closeModal}>&times;</span>
             
+            <h2>{$i18n('addFood')}</h2>
+            
             <div class="form-group">
+                <label for="food-name">{$i18n('foodName')}</label>
                 <input
                     id="food-name"
                     type="text"
@@ -262,6 +294,7 @@
             </div>
             
             <div class="form-group">
+                <label for="food-calories">{$i18n('calories')}</label>
                 <input
                     id="food-calories"
                     type="number"
@@ -270,6 +303,31 @@
                     min="0"
                     step="1"
                 />
+            </div>
+            
+            <!-- NEW: Tags section with improved UX -->
+            <div class="form-group">
+                <label>{$i18n('tags')}:</label>
+                
+                <!-- Selected tags display as pills -->
+                <div class="tags-container">
+                    {#each selectedTags as tag}
+                        <div class="tag-pill">
+                            <span class="tag-text">{tag}</span>
+                            <button class="tag-remove" on:click={() => removeTag(tag)}>×</button>
+                        </div>
+                    {/each}
+                    
+                    <!-- Inline tag input - cleaner design -->
+                    <div class="inline-tag-input">
+                        <input
+                            type="text"
+                            placeholder={selectedTags.length ? "" : $i18n('addNewTag')}
+                            bind:value={newTagInput}
+                            on:keydown={handleTagInputKeydown}
+                        />
+                    </div>
+                </div>
             </div>
             
             <!-- Pixabay image search component - pass selectedImage prop to persist selection -->
@@ -457,5 +515,61 @@
 
     .cancel-btn:hover {
         background-color: #f5f5f5;
+    }
+    
+    /* Tags-related styles */
+    .tags-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding: 5px 0;
+    }
+    
+    .tag-pill {
+        display: flex;
+        align-items: center;
+        background-color: #e1f5fe;
+        border-radius: 16px;
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+    
+    .tag-text {
+        margin-right: 5px;
+    }
+    
+    .tag-remove {
+        background: none;
+        border: none;
+        color: #555;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        padding: 0 3px;
+        line-height: 1;
+    }
+    
+    .inline-tag-input {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px;
+        background-color: #f9f9f9;
+    }
+    
+    .inline-tag-input input {
+        border: none;
+        outline: none;
+        flex: 1;
+        padding: 0;
+        margin: 0;
+        font-size: 14px;
+    }
+    
+    .inline-tag-input input::placeholder {
+        color: #bbb;
     }
 </style>

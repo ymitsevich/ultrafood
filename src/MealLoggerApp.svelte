@@ -363,61 +363,207 @@
         showEditFoodModal = true;
     }
     
+    // Handle add new category (now it adds a new tag group)
+    function addNewCategory() {
+        if (newCategoryName.trim()) {
+            // Convert to lowercase and replace spaces with underscores for consistency
+            const categoryKey = newCategoryName.trim().toLowerCase().replace(/\s+/g, '_');
+            
+            // Check if category already exists
+            if (!foodData[categoryKey]) {
+                // Create the new category with an empty array
+                foodData[categoryKey] = [];
+                
+                // Trigger reactivity by creating a new reference
+                foodData = { ...foodData };
+                
+                // Switch to the new category
+                currentCategory = categoryKey;
+            }
+            
+            // Reset and close modal
+            newCategoryName = '';
+            showAddCategoryModal = false;
+        }
+    }
+    
+    // Format date for display
+    function formatDate(isoString) {
+        try {
+            const date = new Date(isoString);
+            return date.toLocaleString();
+        } catch (e) {
+            return isoString;
+        }
+    }
+    
+    // Function to export data
+    async function exportData() {
+        if (!database.isAvailable()) {
+            alert($i18n('localModeActive'));
+            return;
+        }
+        
+        try {
+            // Show loading notification
+            showNotification($i18n('exportingData'));
+            
+            // Get all data to export
+            const { foodItems, meals } = await database.exportCollections();
+            
+            // Create a single combined JSON file for download with both collections
+            const combinedData = {
+                foodItems: foodItems || [],
+                submittedMeals: meals || []
+            };
+            
+            // Generate timestamp for the filename
+            const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+            
+            if ((foodItems && foodItems.length > 0) || (meals && meals.length > 0)) {
+                // Download the combined data as a single file
+                downloadJsonFile(
+                    combinedData, 
+                    `meal-logger-export-${timestamp}.json`
+                );
+                
+                // Show success notification
+                showNotification(
+                    $i18n('importSuccessful') + ` (${foodItems?.length || 0} ${$i18n('foodItemsImported')}, ${meals?.length || 0} ${$i18n('mealsImported')})`
+                );
+            } else {
+                showNotification(
+                    $i18n('importFailed'), 
+                    'error'
+                );
+            }
+        } catch (error) {
+            console.error('Error during export:', error);
+            showNotification($i18n('errorExporting'), 'error');
+        }
+    }
+    
+    // Helper function to download data as a JSON file
+    function downloadJsonFile(data, filename) {
+        const jsonString = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create a temporary link element
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        
+        // Append to the document, click it to trigger download, then remove it
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the URL object
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
+    
+    // Function to open the submitted meals modal
+    function openSubmittedMealsModal() {
+        showSubmittedMealsModal = true;
+        
+        // If we haven't loaded any meals yet, load the first page
+        if (submittedMeals.length === 0) {
+            loadSubmittedMeals(true);
+        }
+    }
+    
+    function closeSubmittedMealsModal() {
+        showSubmittedMealsModal = false;
+    }
+    
+    function handleAddNewFood(newFood) {
+        // If the food item has tags, add it to all relevant tag categories
+        if (newFood.tags && Array.isArray(newFood.tags) && newFood.tags.length > 0) {
+            // Make sure each tag category exists and add the food to each
+            newFood.tags.forEach(tag => {
+                if (!foodData[tag]) {
+                    foodData[tag] = [];
+                }
+                
+                // Check if food already exists in this tag category
+                const existingIndex = foodData[tag].findIndex(item => item.id === newFood.id);
+                if (existingIndex < 0) {
+                    foodData[tag].push(newFood);
+                }
+            });
+        } else {
+            // Legacy behavior: Add the new food to the current category
+            if (!foodData[currentCategory]) {
+                foodData[currentCategory] = [];
+            }
+            
+            // Add new food to the current category
+            foodData[currentCategory] = [...foodData[currentCategory], newFood];
+        }
+        
+        // Create a new reference for the entire foodData object to trigger reactivity
+        foodData = { ...foodData };
+    }
+    
     async function handleSaveEditedFood(updatedFood) {
         // Store the original food item before updates for comparison
         const originalFood = { ...editingFood };
         let updatedLocalUI = false;
-
-        // Find the category of the food
-        const category = updatedFood.category || currentCategory;
         
-        // Make sure the category exists
-        if (!foodData[category]) {
-            foodData[category] = [];
-        }
-        
-        // Find and update the food item
-        const existingIndex = foodData[category].findIndex(item => item.id === updatedFood.id);
-        
-        if (existingIndex >= 0) {
-            // Update existing item in same category
-            foodData[category][existingIndex] = { ...updatedFood };
-            updatedLocalUI = true;
-        } else {
-            // If not found in current category (maybe category was changed)
-            let foundInOtherCategory = false;
-            
-            // Look for the item in all categories
-            for (const cat of Object.keys(foodData)) {
-                if (cat === category) continue; // Already checked current category
-                
-                const idx = foodData[cat].findIndex(item => item.id === updatedFood.id);
-                if (idx >= 0) {
-                    // Remove from old category
-                    foodData[cat].splice(idx, 1);
-                    // Add to new category
-                    foodData[category].push(updatedFood);
-                    foundInOtherCategory = true;
-                    updatedLocalUI = true;
-                    break;
+        // Clear food from all categories first (it might have existed in multiple due to tags)
+        for (const category of Object.keys(foodData)) {
+            const itemIndex = foodData[category].findIndex(item => item.id === updatedFood.id);
+            if (itemIndex >= 0) {
+                foodData[category].splice(itemIndex, 1);
+                // Remove empty categories
+                if (foodData[category].length === 0) {
+                    delete foodData[category];
                 }
-            }
-            
-            // If not found in any category, add it to the specified category
-            if (!foundInOtherCategory) {
-                foodData[category].push(updatedFood);
                 updatedLocalUI = true;
             }
         }
         
+        // Now add the food to all its tag categories
+        if (updatedFood.tags && Array.isArray(updatedFood.tags) && updatedFood.tags.length > 0) {
+            updatedFood.tags.forEach(tag => {
+                // Create the tag category if it doesn't exist
+                if (!foodData[tag]) {
+                    foodData[tag] = [];
+                }
+                
+                // Add the food to the tag category
+                foodData[tag].push(updatedFood);
+                updatedLocalUI = true;
+            });
+        } else if (updatedFood.category) {
+            // Legacy behavior: use single category
+            const category = updatedFood.category;
+            
+            // Make sure the category exists
+            if (!foodData[category]) {
+                foodData[category] = [];
+            }
+            
+            // Add to category
+            foodData[category].push(updatedFood);
+            updatedLocalUI = true;
+        }
+        
+        // If there are no remaining categories after removing empty ones,
+        // switch to the first available category or the RECENT_CATEGORY
+        if (Object.keys(foodData).filter(cat => cat !== RECENT_CATEGORY).length === 0) {
+            currentCategory = RECENT_CATEGORY;
+        } 
+        // If the current category was deleted, switch to another one or to RECENT_CATEGORY
+        else if (!foodData[currentCategory] && currentCategory !== RECENT_CATEGORY) {
+            const availableCategories = Object.keys(foodData).filter(cat => cat !== RECENT_CATEGORY);
+            currentCategory = availableCategories.length > 0 ? availableCategories[0] : RECENT_CATEGORY;
+        }
+
         // Update foodData to trigger reactivity if changes were made
         if (updatedLocalUI) {
             foodData = { ...foodData };
-        }
-        
-        // If category changed, switch to the new category
-        if (category !== currentCategory) {
-            currentCategory = category;
         }
         
         // If not in local-only mode, also update all submitted meals containing this food item
@@ -509,135 +655,8 @@
                 
                 // Update foodData to trigger reactivity
                 foodData = { ...foodData };
-                break;
             }
         }
-    }
-    
-    function openSubmittedMealsModal() {
-        showSubmittedMealsModal = true;
-        
-        // If we haven't loaded any meals yet, load the first page
-        if (submittedMeals.length === 0) {
-            loadSubmittedMeals(true);
-        }
-    }
-    
-    function closeSubmittedMealsModal() {
-        showSubmittedMealsModal = false;
-    }
-    
-    // Format date for display
-    function formatDate(isoString) {
-        try {
-            const date = new Date(isoString);
-            return date.toLocaleString();
-        } catch (e) {
-            return isoString;
-        }
-    }
-    
-    function handleAddNewFood(newFood) {
-        // Add the new food to the current category
-        if (!foodData[currentCategory]) {
-            foodData[currentCategory] = [];
-        }
-        
-        // Add new food to the current category
-        foodData[currentCategory] = [...foodData[currentCategory], newFood];
-        
-        // Create a new reference for the entire foodData object to trigger reactivity
-        foodData = { ...foodData };
-    }
-
-    // Add new category function
-    function addNewCategory() {
-        if (newCategoryName.trim()) {
-            // Convert to lowercase and replace spaces with underscores for consistency
-            const categoryKey = newCategoryName.trim().toLowerCase().replace(/\s+/g, '_');
-            
-            // Check if category already exists
-            if (!foodData[categoryKey]) {
-                // Create the new category with an empty array
-                foodData[categoryKey] = [];
-                
-                // Trigger reactivity by creating a new reference
-                foodData = { ...foodData };
-                
-                // Switch to the new category
-                currentCategory = categoryKey;
-            }
-            
-            // Reset and close modal
-            newCategoryName = '';
-            showAddCategoryModal = false;
-        }
-    }
-    
-    // Function to export data
-    async function exportData() {
-        if (!database.isAvailable()) {
-            alert($i18n('localModeActive'));
-            return;
-        }
-        
-        try {
-            // Show loading notification
-            showNotification($i18n('exportingData'));
-            
-            // Get all data to export
-            const { foodItems, meals } = await database.exportCollections();
-            
-            // Create a single combined JSON file for download with both collections
-            const combinedData = {
-                foodItems: foodItems || [],
-                submittedMeals: meals || []
-            };
-            
-            // Generate timestamp for the filename
-            const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-            
-            if ((foodItems && foodItems.length > 0) || (meals && meals.length > 0)) {
-                // Download the combined data as a single file
-                downloadJsonFile(
-                    combinedData, 
-                    `meal-logger-export-${timestamp}.json`
-                );
-                
-                // Show success notification
-                showNotification(
-                    $i18n('importSuccessful') + ` (${foodItems?.length || 0} ${$i18n('foodItemsImported')}, ${meals?.length || 0} ${$i18n('mealsImported')})`
-                );
-            } else {
-                showNotification(
-                    $i18n('importFailed'), 
-                    'error'
-                );
-            }
-        } catch (error) {
-            console.error('Error during export:', error);
-            showNotification($i18n('errorExporting'), 'error');
-        }
-    }
-    
-    // Helper function to download data as a JSON file
-    function downloadJsonFile(data, filename) {
-        const jsonString = JSON.stringify(data, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        // Create a temporary link element
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        
-        // Append to the document, click it to trigger download, then remove it
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Clean up the URL object
-        setTimeout(() => URL.revokeObjectURL(url), 100);
     }
 </script>
 

@@ -18,12 +18,12 @@
     export let foodItem = null;
     export let onSave;
     export let onDelete;
-    export let categories = [];
+    export let categories = []; // Now treated as available tags
 
     // Local state
     let foodName = "";
     let imageSearchQuery = ""; 
-    let selectedCategory = "";
+    let selectedTags = []; // Changed from selectedCategory to selectedTags array
     let calories = "";
     let fileInput;
     let nameInput;
@@ -35,6 +35,7 @@
     let confirmDeleteMode = false;
     let initialized = false;
     let lastFoodItemId = null;
+    let newTagInput = ""; // For adding new tags
     
     // Initialize form when modal opens or food item changes
     $: if (shouldInitializeForm(showModal, foodItem, initialized, lastFoodItemId)) {
@@ -55,7 +56,17 @@
         // Initialize form fields
         foodName = foodItem.name || "";
         imageSearchQuery = foodItem.name || "";
-        selectedCategory = foodItem.category || "";
+        
+        // Initialize selected tags from either tags array or legacy category
+        if (foodItem.tags && Array.isArray(foodItem.tags) && foodItem.tags.length > 0) {
+            selectedTags = [...foodItem.tags];
+        } else if (foodItem.category) {
+            // If coming from legacy data with only category, convert to tags
+            selectedTags = [foodItem.category];
+        } else {
+            selectedTags = [];
+        }
+        
         calories = foodItem.calories || "";
         imageData = null;
         
@@ -86,7 +97,8 @@
     function resetForm() {
         foodName = "";
         imageSearchQuery = "";
-        selectedCategory = "";
+        selectedTags = [];
+        newTagInput = "";
         calories = "";
         imageData = null;
         imageBlob = null;
@@ -169,33 +181,25 @@
                 canvas.width = FINAL_SIZE;
                 canvas.height = FINAL_SIZE;
                 
-                // Draw the cropped and resized image on canvas
                 const ctx = canvas.getContext('2d');
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
                 
-                // Draw the image with cropping and resizing
+                // Draw the image cropped and resized
                 ctx.drawImage(
                     img,
-                    cropData.sourceX, cropData.sourceY,
-                    cropData.sourceSize, cropData.sourceSize,
-                    0, 0,
-                    FINAL_SIZE, FINAL_SIZE
+                    cropData.sourceX, cropData.sourceY, cropData.sourceSize, cropData.sourceSize,
+                    0, 0, FINAL_SIZE, FINAL_SIZE
                 );
                 
-                // Convert to blob with compression
-                canvas.toBlob(
-                    (blob) => {
-                        if (blob) {
-                            console.log(`Image optimized: ${Math.round(blob.size / 1024)}KB (${FINAL_SIZE}x${FINAL_SIZE}px, square)`);
-                            resolve(blob);
-                        } else {
-                            reject(new Error("Failed to compress image"));
-                        }
-                    },
-                    'image/jpeg',
-                    0.85
-                );
+                // Convert to blob
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Canvas to Blob conversion failed'));
+                    }
+                }, 'image/jpeg', 0.8);  // Good quality JPEG
             };
             
             img.onerror = () => {
@@ -279,16 +283,18 @@
     
     // Create updated food item object
     function createUpdatedFoodItem(imageUrl) {
+        // Add the tags array to the food item
         return {
             id: foodItem.id, // Keep the same ID
             name: foodName.trim(),
-            category: selectedCategory || foodItem.category,
+            tags: selectedTags, // Use tags array instead of category
+            category: selectedTags.length > 0 ? selectedTags[0] : "", // Keep category for backwards compatibility
             image: imageUrl,
             calories: calories ? parseInt(calories, 10) : null,
             // Preserve other properties
             ...Object.fromEntries(
                 Object.entries(foodItem).filter(([key]) => 
-                    !['id', 'name', 'category', 'image', 'imageUrl', 'calories'].includes(key)
+                    !['id', 'name', 'tags', 'category', 'image', 'imageUrl', 'calories'].includes(key)
                 )
             )
         };
@@ -319,6 +325,35 @@
         } catch (error) {
             console.error("Error deleting food item:", error);
             uploadError = "Failed to delete food item";
+        }
+    }
+    
+    // Add a new tag from input
+    function addTag() {
+        if (!newTagInput.trim()) return;
+        
+        // Convert to lowercase and replace spaces with underscores for consistency
+        const tagKey = newTagInput.trim().toLowerCase().replace(/\s+/g, '_');
+        
+        // Add only if it doesn't already exist in selected tags
+        if (!selectedTags.includes(tagKey)) {
+            selectedTags = [...selectedTags, tagKey];
+        }
+        
+        // Reset input
+        newTagInput = "";
+    }
+    
+    // Remove a tag
+    function removeTag(tag) {
+        selectedTags = selectedTags.filter(t => t !== tag);
+    }
+    
+    // Handle keydown in the tag input (add tag on Enter)
+    function handleTagInputKeydown(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            addTag();
         }
     }
 
@@ -354,13 +389,45 @@
                 </button>
             </div>
             
+            <!-- Tags input replaces category dropdown -->
             <div class="form-group">
-                <label for="food-category">{$i18n('category')}:</label>
-                <select id="food-category" bind:value={selectedCategory}>
-                    {#each categories as category}
-                        <option value={category}>{category.charAt(0).toUpperCase() + category.slice(1)}</option>
+                <label>{$i18n('tags')}:</label>
+                
+                <!-- Selected tags display as pills -->
+                <div class="tags-container">
+                    {#each selectedTags as tag}
+                        <div class="tag-pill">
+                            <span class="tag-text">{tag}</span>
+                            <button class="tag-remove" on:click={() => removeTag(tag)}>×</button>
+                        </div>
                     {/each}
-                </select>
+                    
+                    <!-- Inline tag input - cleaner design -->
+                    <div class="inline-tag-input">
+                        <input
+                            type="text"
+                            placeholder={selectedTags.length ? "" : $i18n('addNewTag')}
+                            bind:value={newTagInput}
+                            on:keydown={handleTagInputKeydown}
+                        />
+                    </div>
+                </div>
+                
+                <!-- Quick tag selection - horizontal scrolling for available tags -->
+                <div class="quick-tags-container">
+                    <div class="quick-tags">
+                        {#each categories.filter(cat => !selectedTags.includes(cat)) as category}
+                            <button 
+                                class="quick-tag-btn" 
+                                on:click={() => {
+                                    selectedTags = [...selectedTags, category];
+                                }}
+                            >
+                                {category}
+                            </button>
+                        {/each}
+                    </div>
+                </div>
             </div>
             
             <div class="form-group">
@@ -660,5 +727,86 @@
     
     .search-with-name-btn:hover {
         background-color: #f0f0f0;
+    }
+    
+    /* New tag-related styles */
+    .tags-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding: 5px 0;
+    }
+    
+    .tag-pill {
+        display: flex;
+        align-items: center;
+        background-color: #e1f5fe;
+        border-radius: 16px;
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+    
+    .tag-text {
+        margin-right: 5px;
+    }
+    
+    .tag-remove {
+        background: none;
+        border: none;
+        color: #555;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        padding: 0 3px;
+        line-height: 1;
+    }
+    
+    .inline-tag-input {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        background-color: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 16px;
+        padding: 5px 10px;
+        margin-left: 8px;
+    }
+    
+    .inline-tag-input input {
+        border: none;
+        background: transparent;
+        outline: none;
+        flex: 1;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .quick-tags-container {
+        max-height: 40px;
+        overflow-x: auto;
+        padding: 4px 0;
+        margin-top: 8px;
+    }
+    
+    .quick-tags {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+    
+    .quick-tag-btn {
+        background-color: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 16px;
+        padding: 4px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .quick-tag-btn:hover {
+        background-color: #e1f5fe;
+        border-color: #81d4fa;
     }
 </style>

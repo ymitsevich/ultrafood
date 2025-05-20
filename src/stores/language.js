@@ -47,12 +47,14 @@ export const translations = {
         cancel: 'Cancel',
         customAmount: 'Custom amount...',
         add: 'Add',
-        piece: 'piece',
+        piece: 'pc',
         
         // Add food modal
-        addFood: 'Add Food',
+        addFood: 'Add Food Item',
         foodName: 'Food Name',
         category: 'Category',
+        tags: 'Tags', // New: for tags feature
+        addNewTag: 'Add new tag...', // New: for tags feature
         selectCategory: 'Select Category',
         image: 'Image',
         uploadImage: 'Upload Image',
@@ -162,6 +164,8 @@ export const translations = {
         addFood: 'Добавить продукт',
         foodName: 'Название продукта',
         category: 'Категория',
+        tags: 'Теги', // New: for tags feature
+        addNewTag: 'Добавить новый тег...', // New: for tags feature
         selectCategory: 'Выберите категорию',
         image: 'Изображение',
         uploadImage: 'Загрузить изображение',
@@ -221,23 +225,23 @@ export const translations = {
         errorLoadingMeals: 'Ошибка загрузки приемов пищи.',
         errorSaving: 'Ошибка сохранения.',
         errorDeleting: 'Ошибка удаления.',
-        localModeActive: 'Локальный режим: Изменения не будут сохранены в облаке.',
+        localModeActive: 'Локальный режим: изменения не будут сохранены в облаке.',
         cloudStorageHint: 'Для включения облачного хранилища: создайте базу данных Firestore и установите LOCAL_ONLY_MODE=false в firebase.js',
         
         // Backup modal
         dataBackup: 'Резервное копирование',
         creatingBackup: 'Создание резервной копии...',
-        backupCompleted: 'Резервное копирование выполнено!',
+        backupCompleted: 'Резервное копирование завершено!',
         backupPrefix: 'Префикс резервной копии:',
         foodItems: 'Продукты:',
         meals: 'Приемы пищи:',
         backupFailed: 'Ошибка резервного копирования',
         
         // Export/import
-        exportData: 'Скачать данные',
+        exportData: 'Экспорт данных',
         exportingData: 'Экспорт данных...',
         importData: 'Импорт данных',
-        importSuccessful: 'Импорт успешен! Добавлено:',
+        importSuccessful: 'Импорт успешно выполнен! Добавлено:',
         foodItemsImported: 'продуктов',
         mealsImported: 'приемов пищи',
         importFailed: 'Ошибка импорта',
