@@ -49,13 +49,13 @@
             <span class="close-modal" on:click={closeModal}>&times;</span>
             <div class="amount-options">
                 <button class="amount-btn" on:click={() => saveAndClose('20g')}>20g</button>
+                <button class="amount-btn" on:click={() => saveAndClose('25g')}>25g</button>
                 <button class="amount-btn" on:click={() => saveAndClose('30g')}>30g</button>
+                <button class="amount-btn" on:click={() => saveAndClose('35g')}>35g</button>
+                <button class="amount-btn" on:click={() => saveAndClose('40g')}>40g</button>
                 <button class="amount-btn" on:click={() => saveAndClose('50g')}>50g</button>
-                <button class="amount-btn" on:click={() => saveAndClose('100g')}>100g</button>
-                <button class="amount-btn" on:click={() => saveAndClose('150g')}>150g</button>
-                <button class="amount-btn" on:click={() => saveAndClose('200g')}>200g</button>
+                <button class="amount-btn" on:click={() => saveAndClose('60g')}>60g</button>
                 <button class="amount-btn" on:click={() => saveAndClose('1 piece')}>1 piece</button>
-                <button class="amount-btn" on:click={() => saveAndClose('2 pieces')}>2 pieces</button>
             </div>
             <div class="custom-amount">
                 <input 
@@ -169,3 +169,4 @@
         white-space: nowrap;
     }
 </style>
+

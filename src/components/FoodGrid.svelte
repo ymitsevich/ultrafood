@@ -72,9 +72,14 @@
         return food?.defaultAmount || $foodDefaults[foodId]?.amount || '50g';
     }
     
-    // Handle config button click (for amount settings)
+    // Handle config button click (now adds to basket with default amount)
     function handleConfigClick(e, food) {
         e.stopPropagation();
+        addToBasket(food);
+    }
+
+    // Handle food button click (now opens amount modal)
+    function handleFoodClick(food) {
         onConfigClick(food);
     }
     
@@ -93,7 +98,7 @@
             <div class="food-item" class:added-to-basket={addedToBasket[food.id]}>
                 <button 
                     class="food-btn" 
-                    on:click={() => addToBasket(food)}
+                    on:click={() => handleFoodClick(food)}
                 >
                     <div class="food-visual">
                         {#if food.imageUrl || food.image}
@@ -131,9 +136,9 @@
                     {/if}
                 </button>
                 
-                <!-- Config button (amount settings) -->
+                <!-- Config button (now adds to basket with default amount) -->
                 <button class="config-btn" on:click={(e) => handleConfigClick(e, food)}>
-                    <span class="icon">⚖️</span>
+                    <span class="icon">🌀</span>
                 </button>
                 
                 <!-- Edit button (added for editing food details) -->
@@ -375,3 +380,4 @@
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     }
 </style>
+
