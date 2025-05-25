@@ -136,6 +136,15 @@ export const translations = {
         importFailed: 'Import failed',
         errorExporting: 'Error exporting data',
         
+        // Daily export modal
+        dailyMealExport: 'Daily Meal Export',
+        selectDate: 'Select Date',
+        exportMeals: 'Export Meals',
+        exporting: 'Exporting...',
+        noMealsForDate: 'No meals found for the selected date',
+        exportForwardedToChatGPT: 'Meal data sent to ChatGPT for analysis!',
+        exportDownloaded: 'Meal data downloaded as {filename}',
+        
         // Menu
         menu: 'Menu'
     },
@@ -246,6 +255,15 @@ export const translations = {
         mealsImported: 'приемов пищи',
         importFailed: 'Ошибка импорта',
         errorExporting: 'Ошибка экспорта данных',
+        
+        // Daily export modal
+        dailyMealExport: 'Экспорт приемов пищи за день',
+        selectDate: 'Выберите дату',
+        exportMeals: 'Экспортировать приемы пищи',
+        exporting: 'Экспортируем...',
+        noMealsForDate: 'Приемы пищи за выбранную дату не найдены',
+        exportForwardedToChatGPT: 'Данные о приеме пищи отправлены в ChatGPT для анализа!',
+        exportDownloaded: 'Данные о приеме пищи загружены как {filename}',
         
         // Menu
         menu: 'Меню'

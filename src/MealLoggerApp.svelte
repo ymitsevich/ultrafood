@@ -17,6 +17,7 @@
     import EditMealModal from './components/EditMealModal.svelte';
     import LanguageModal from './components/LanguageModal.svelte';
     import SlideUpMenu from './components/SlideUpMenu.svelte';
+    import DailyExportModal from './components/DailyExportModal.svelte';
     
     // Accept services from dependency injection container
     export let services;
@@ -71,6 +72,9 @@
     // Language modal state
     let showLanguageModal = false;
     
+    // Daily export modal state
+    let showDailyExportModal = false;
+    
     // Backup state
     let isBackingUp = false;
     let backupResult = null;
@@ -103,6 +107,11 @@
             icon: '⬇️',
             label: () => $i18n('exportData'),
             action: exportData
+        },
+        {
+            icon: '📅',
+            label: () => $i18n('dailyMealExport'),
+            action: openDailyExportModal
         }
     ];
     
@@ -181,6 +190,11 @@
     // Handle language selector button click
     function openLanguageModal() {
         showLanguageModal = true;
+    }
+    
+    // Handle daily export modal
+    function openDailyExportModal() {
+        showDailyExportModal = true;
     }
     
     // Load submitted meals from database with pagination
@@ -938,6 +952,12 @@
             <div class="notification-message">{notification.message}</div>
         </div>
     {/if}
+
+    <!-- Daily Export Modal -->
+    <DailyExportModal 
+        bind:showModal={showDailyExportModal} 
+        {showNotification}
+    />
 </div>
 
 <style>
