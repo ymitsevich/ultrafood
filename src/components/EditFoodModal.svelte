@@ -278,16 +278,28 @@
         // Default to existing image URL
         let imageUrl = foodItem.imageUrl || foodItem.image;
         
-        // Upload new image if selected
-        if (selectedPixabayImage && selectedPixabayImage.id !== foodItem.id) {
-            // Use the smallest image URL available
-            const smallImageUrl = selectedPixabayImage.smallImageUrl || selectedPixabayImage.previewURL;
-            imageBlob = await fetchImageAsBlob(smallImageUrl);
-            // Use sanitized filename for image upload
-            imageUrl = await uploadImage(imageBlob, sanitizeFilename(foodName));
-        } else if (imageBlob) {
-            // Use sanitized filename for image upload
-            imageUrl = await uploadImage(imageBlob, sanitizeFilename(foodName));
+        try {
+            if (selectedPixabayImage && selectedPixabayImage.id !== foodItem.id) {
+                // User selected a new Pixabay image
+                console.log("Uploading Pixabay image");
+                const smallImageUrl = selectedPixabayImage.smallImageUrl || selectedPixabayImage.previewURL;
+                imageBlob = await fetchImageAsBlob(smallImageUrl);
+                // Use the food item's ID to ensure we overwrite the existing image
+                imageUrl = await uploadImage(imageBlob, foodItem.id);
+                console.log("New image URL from Pixabay:", imageUrl);
+            } else if (imageBlob) {
+                // User uploaded a local image
+                console.log("Uploading local image blob");
+                // Use the food item's ID to ensure we overwrite the existing image
+                imageUrl = await uploadImage(imageBlob, foodItem.id);
+                console.log("New image URL from local upload:", imageUrl);
+            } else {
+                // No new image selected, keeping existing URL
+                console.log("No new image detected, keeping existing URL:", imageUrl);
+            }
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            throw new Error("Failed to upload image: " + error.message);
         }
         
         return imageUrl;
@@ -302,6 +314,7 @@
             tags: selectedTags, // Use tags array instead of category
             category: selectedTags.length > 0 ? selectedTags[0] : "", // Keep category for backwards compatibility
             image: imageUrl,
+            imageUrl: imageUrl, // Ensure both image and imageUrl are set to the same value
             calories: calories ? parseInt(calories, 10) : null,
             // Preserve other properties
             ...Object.fromEntries(
