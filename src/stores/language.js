@@ -146,7 +146,29 @@ export const translations = {
         exportDownloaded: 'Meal data downloaded as {filename}',
         
         // Menu
-        menu: 'Menu'
+        menu: 'Menu',
+        
+        // Backdating procedure
+        backdateProcedure: 'Backdate Categories',
+        backdateRunning: 'Running backdating procedure...',
+        backdateCompleted: 'Backdating completed successfully!',
+        backdateFailed: 'Backdating procedure failed',
+        backdateItemsProcessed: 'Items processed: {count}',
+        backdateItemsUpdated: 'Items updated: {count}',
+        backdateConfirm: 'This will move category values to tags for all food items. Continue?',
+        
+        // Meal backdating
+        backdateMealsCompleted: 'Meal backdating completed successfully!',
+        backdateMealsFailed: 'Meal backdating procedure failed',
+        backdateMealsProcessed: 'Meals processed: {count}',
+        backdateMealsUpdated: 'Meals updated: {count}',
+        
+        // Category deletion
+        deleteCategoryCompleted: 'Category deletion completed successfully!',
+        deleteCategoryFailed: 'Category deletion procedure failed',
+        deleteCategoryFoodItems: 'Food items updated: {count}',
+        deleteCategoryMeals: 'Meals updated: {count}',
+        deletionRunning: 'Deleting categories...'
     },
     ru: {
         // Categories
@@ -266,7 +288,29 @@ export const translations = {
         exportDownloaded: 'Данные о приеме пищи загружены как {filename}',
         
         // Menu
-        menu: 'Меню'
+        menu: 'Меню',
+        
+        // Backdating procedure
+        backdateProcedure: 'Обновить категории',
+        backdateRunning: 'Выполняется процедура обновления...',
+        backdateCompleted: 'Обновление успешно завершено!',
+        backdateFailed: 'Ошибка процедуры обновления',
+        backdateItemsProcessed: 'Обработано элементов: {count}',
+        backdateItemsUpdated: 'Обновлено элементов: {count}',
+        backdateConfirm: 'Это перенесет значения категорий в теги для всех продуктов. Продолжить?',
+        
+        // Meal backdating
+        backdateMealsCompleted: 'Обновление приемов пищи успешно завершено!',
+        backdateMealsFailed: 'Ошибка процедуры обновления приемов пищи',
+        backdateMealsProcessed: 'Обработано приемов пищи: {count}',
+        backdateMealsUpdated: 'Обновлено приемов пищи: {count}',
+        
+        // Category deletion
+        deleteCategoryCompleted: 'Удаление категории завершено успешно!',
+        deleteCategoryFailed: 'Ошибка процедуры удаления категории',
+        deleteCategoryFoodItems: 'Обновлено продуктов: {count}',
+        deleteCategoryMeals: 'Обновлено приемов пищи: {count}',
+        deletionRunning: 'Удаление категорий...'
     }
 };
 

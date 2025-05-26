@@ -18,6 +18,7 @@
     import LanguageModal from './components/LanguageModal.svelte';
     import SlideUpMenu from './components/SlideUpMenu.svelte';
     import DailyExportModal from './components/DailyExportModal.svelte';
+    import BackdatingModal from './components/BackdatingModal.svelte';
     
     // Accept services from dependency injection container
     export let services;
@@ -75,6 +76,9 @@
     // Daily export modal state
     let showDailyExportModal = false;
     
+    // Backdating modal state
+    let showBackdatingModal = false;
+    
     // Backup state
     let isBackingUp = false;
     let backupResult = null;
@@ -112,6 +116,14 @@
             icon: '📅',
             label: () => $i18n('dailyMealExport'),
             action: openDailyExportModal
+        },
+        {
+            type: 'divider' // Add a divider before the backdating option
+        },
+        {
+            icon: '🔄',
+            label: () => $i18n('backdateProcedure'),
+            action: openBackdatingModal
         }
     ];
     
@@ -180,7 +192,22 @@
         } finally {
             isLoading = false;
         }
+        
+        // Listen for food data refresh events from the backdating modal
+        window.addEventListener('foodDataRefresh', handleFoodDataRefresh);
+        
+        // Cleanup event listener on component destroy
+        return () => {
+            window.removeEventListener('foodDataRefresh', handleFoodDataRefresh);
+        };
     });
+    
+    // Handle food data refresh event
+    async function handleFoodDataRefresh() {
+        console.log('Refreshing food data after backdating...');
+        await loadFoodData();
+        updateRecentFoods();
+    }
     
     // Toggle menu
     function toggleMenu() {
@@ -195,6 +222,11 @@
     // Handle daily export modal
     function openDailyExportModal() {
         showDailyExportModal = true;
+    }
+    
+    // Handle backdating modal
+    function openBackdatingModal() {
+        showBackdatingModal = true;
     }
     
     // Load submitted meals from database with pagination
@@ -672,6 +704,107 @@
             }
         }
     }
+    
+    // Function to run the backdating procedure
+    async function runBackdatingProcedure() {
+        // Check if Firebase is available
+        if (!database.isAvailable()) {
+            showNotification($i18n('localModeActive'), 'error');
+            return;
+        }
+        
+        // Show confirmation dialog
+        const confirmed = confirm($i18n('backdateConfirm'));
+        if (!confirmed) {
+            return;
+        }
+        
+        try {
+            // Show loading notification
+            showNotification($i18n('backdateRunning'));
+            
+            // Call the backdating procedure
+            const result = await database.backdateCategoryToTags();
+            
+            if (result.success) {
+                // Show success notification with statistics
+                showNotification(
+                    $i18n('backdateCompleted') + ' ' + 
+                    $i18n('backdateItemsProcessed', { count: result.processedCount }) + ', ' +
+                    $i18n('backdateItemsUpdated', { count: result.updatedCount })
+                );
+                
+                // Refresh food data to reflect changes
+                await loadFoodData();
+            } else {
+                // Show error notification
+                showNotification(
+                    $i18n('backdateFailed') + (result.message ? ': ' + result.message : ''),
+                    'error'
+                );
+            }
+        } catch (error) {
+            console.error('Error during backdating procedure:', error);
+            showNotification($i18n('backdateFailed') + ': ' + error.message, 'error');
+        }
+    }
+    
+    // Helper function to reload food data
+    async function loadFoodData() {
+        try {
+            // Reset food data
+            foodData = getFoodData();
+            
+            // Get fresh food items from database
+            const firestoreItems = await database.getFoodItems();
+            
+            if (firestoreItems && firestoreItems.length > 0) {
+                // Process each item and organize by tags/categories
+                firestoreItems.forEach(item => {
+                    if (!item || !item.id || !item.name) {
+                        return;
+                    }
+                    
+                    // Handle items with tags (new system)
+                    if (item.tags && Array.isArray(item.tags) && item.tags.length > 0) {
+                        item.tags.forEach(tag => {
+                            if (!foodData[tag]) {
+                                foodData[tag] = [];
+                            }
+                            
+                            // Add item to tag category if not already there
+                            const existingIndex = foodData[tag].findIndex(f => f.id === item.id);
+                            if (existingIndex < 0) {
+                                foodData[tag].push(item);
+                            }
+                        });
+                    } else {
+                        // Handle items with legacy category system
+                        const category = item.category || Object.keys(foodData)[0];
+                        
+                        if (!foodData[category]) {
+                            foodData[category] = [];
+                        }
+                        
+                        const existingIndex = foodData[category].findIndex(f => f.id === item.id);
+                        if (existingIndex < 0) {
+                            foodData[category].push(item);
+                        }
+                    }
+                });
+                
+                // Filter out any undefined items
+                Object.keys(foodData).forEach(category => {
+                    foodData[category] = foodData[category].filter(item => item && item.id && item.name);
+                });
+                
+                // Update foodData to trigger reactivity
+                foodData = { ...foodData };
+            }
+        } catch (error) {
+            console.error('Error reloading food data:', error);
+        }
+    }
 </script>
 
 <div class="meal-logger">
@@ -954,8 +1087,13 @@
     {/if}
 
     <!-- Daily Export Modal -->
-    <DailyExportModal 
-        bind:showModal={showDailyExportModal} 
+    <DailyExportModal
+        bind:showModal={showDailyExportModal}
+        {showNotification}
+    />
+    <!-- Backdating Modal -->
+    <BackdatingModal
+        bind:showModal={showBackdatingModal}
         {showNotification}
     />
 </div>
@@ -1447,30 +1585,31 @@
         min-width: 280px;
         justify-content: center;
     }
-    
+
     .notification.success {
         background-color: #4caf50;
         color: white;
     }
-    
+
     .notification.error {
         background-color: #f44336;
         color: white;
     }
-    
+
     .notification-icon {
         font-size: 20px;
         margin-right: 12px;
     }
-    
+
     .notification-message {
         font-size: 16px;
         font-weight: 500;
     }
-    
+
     @media (max-width: 600px) {
         .meal-item {
             width: 100%;
         }
     }
 </style>
+

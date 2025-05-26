@@ -658,4 +658,278 @@ export class FirebaseDatabaseService extends DatabaseService {
   isAvailable() {
     return this.isFirebaseInitialized;
   }
+
+  /**
+   * Backdate categories to tags for all food items
+   * This function scans all food items and moves category values to tags array
+   * @returns {Promise<{success: boolean, processedCount: number, updatedCount: number, message?: string}>}
+   */
+  async backdateCategoryToTags() {
+    // Check if Firebase is available
+    if (!this.db || !this.isFirebaseInitialized) {
+      return { 
+        success: false, 
+        processedCount: 0,
+        updatedCount: 0,
+        message: "Database not available. Please try again later." 
+      };
+    }
+    
+    try {
+      console.log('Starting category to tags backdating procedure...');
+      
+      // Step 1: Get all food items
+      const foodItemsSnapshot = await getDocs(collection(this.db, "food-items"));
+      const processedCount = foodItemsSnapshot.docs.length;
+      let updatedCount = 0;
+      
+      // Step 2: Process each food item
+      for (const docSnapshot of foodItemsSnapshot.docs) {
+        const foodItem = docSnapshot.data();
+        const foodId = docSnapshot.id;
+        
+        // Check if the item has a category field and needs updating
+        if (foodItem.category && typeof foodItem.category === 'string') {
+          // Initialize tags array if it doesn't exist
+          let tags = foodItem.tags || [];
+          
+          // Only add category to tags if it's not already present
+          if (!tags.includes(foodItem.category)) {
+            tags.push(foodItem.category);
+            
+            // Update the food item in Firebase
+            await updateDoc(doc(this.db, "food-items", foodId), {
+              tags: tags,
+              updatedAt: new Date().toISOString(),
+              backdatedAt: new Date().toISOString() // Mark when backdating was performed
+            });
+            
+            updatedCount++;
+            console.log(`Updated food item [${foodId}]: added category "${foodItem.category}" to tags`);
+          }
+        }
+      }
+      
+      console.log(`Backdating procedure completed: ${processedCount} items processed, ${updatedCount} items updated`);
+      
+      return {
+        success: true,
+        processedCount,
+        updatedCount
+      };
+    } catch (error) {
+      console.error("Error during backdating procedure:", error);
+      return {
+        success: false,
+        processedCount: 0,
+        updatedCount: 0,
+        message: `Backdating failed: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Backdate categories to tags for food items within submitted meals
+   * This function scans all submitted meals and moves category values to tags array for food items
+   * @returns {Promise<{success: boolean, processedCount: number, updatedCount: number, message?: string}>}
+   */
+  async backdateMealCategoryToTags() {
+    // Check if Firebase is available
+    if (!this.db || !this.isFirebaseInitialized) {
+      return { 
+        success: false, 
+        processedCount: 0,
+        updatedCount: 0,
+        message: "Database not available. Please try again later." 
+      };
+    }
+    
+    try {
+      console.log('Starting meal category to tags backdating procedure...');
+      
+      // Step 1: Get all submitted meals
+      const mealsSnapshot = await getDocs(collection(this.db, "submitted-meals"));
+      const processedCount = mealsSnapshot.docs.length;
+      let updatedCount = 0;
+      
+      // Step 2: Process each submitted meal
+      for (const docSnapshot of mealsSnapshot.docs) {
+        const meal = docSnapshot.data();
+        const mealId = docSnapshot.id;
+        let mealUpdated = false;
+        
+        // Check if the meal has items array
+        if (meal.items && Array.isArray(meal.items)) {
+          // Process each food item in the meal
+          const updatedItems = meal.items.map(item => {
+            // Check if the item has a category field and needs updating
+            if (item.category && typeof item.category === 'string') {
+              // Initialize tags array if it doesn't exist
+              let tags = item.tags || [];
+              
+              // Only add category to tags if it's not already present
+              if (!tags.includes(item.category)) {
+                tags.push(item.category);
+                mealUpdated = true;
+                
+                console.log(`Updated food item [${item.id || item.name}] in meal [${mealId}]: added category "${item.category}" to tags`);
+                
+                // Return updated item with new tags
+                return {
+                  ...item,
+                  tags: tags
+                };
+              }
+            }
+            
+            // Return item unchanged if no updates needed
+            return item;
+          });
+          
+          // If any items were updated, save the meal back to Firebase
+          if (mealUpdated) {
+            await updateDoc(doc(this.db, "submitted-meals", mealId), {
+              items: updatedItems,
+              updatedAt: new Date().toISOString(),
+              mealBackdatedAt: new Date().toISOString() // Mark when meal backdating was performed
+            });
+            
+            updatedCount++;
+          }
+        }
+      }
+      
+      console.log(`Meal backdating procedure completed: ${processedCount} meals processed, ${updatedCount} meals updated`);
+      
+      return {
+        success: true,
+        processedCount,
+        updatedCount
+      };
+    } catch (error) {
+      console.error("Error during meal backdating procedure:", error);
+      return {
+        success: false,
+        processedCount: 0,
+        updatedCount: 0,
+        message: `Meal backdating failed: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Delete category fields from all food items and submitted meals
+   * This function removes the legacy category field from both collections
+   * @returns {Promise<{success: boolean, foodItemsProcessed: number, foodItemsUpdated: number, mealsProcessed: number, mealsUpdated: number, message?: string}>}
+   */
+  async deleteCategoryFields() {
+    // Check if Firebase is available
+    if (!this.db || !this.isFirebaseInitialized) {
+      return { 
+        success: false, 
+        foodItemsProcessed: 0,
+        foodItemsUpdated: 0,
+        mealsProcessed: 0,
+        mealsUpdated: 0,
+        message: "Database not available. Please try again later." 
+      };
+    }
+    
+    try {
+      console.log('Starting category field deletion procedure...');
+      
+      let foodItemsProcessed = 0;
+      let foodItemsUpdated = 0;
+      let mealsProcessed = 0;
+      let mealsUpdated = 0;
+      
+      // Step 1: Delete category fields from food items
+      const foodItemsSnapshot = await getDocs(collection(this.db, "food-items"));
+      foodItemsProcessed = foodItemsSnapshot.docs.length;
+      
+      for (const docSnapshot of foodItemsSnapshot.docs) {
+        const foodItem = docSnapshot.data();
+        const foodId = docSnapshot.id;
+        
+        // Check if the item has a category field to remove
+        if (foodItem.hasOwnProperty('category')) {
+          // Create update object with category field removed
+          const { category, ...updatedItem } = foodItem;
+          
+          // Update the food item in Firebase (replace entire document)
+          await setDoc(doc(this.db, "food-items", foodId), {
+            ...updatedItem,
+            updatedAt: new Date().toISOString(),
+            categoryDeletedAt: new Date().toISOString() // Mark when category was deleted
+          });
+          
+          foodItemsUpdated++;
+          console.log(`Removed category field from food item [${foodId}]`);
+        }
+      }
+      
+      // Step 2: Delete category fields from food items within submitted meals
+      const mealsSnapshot = await getDocs(collection(this.db, "submitted-meals"));
+      mealsProcessed = mealsSnapshot.docs.length;
+      
+      for (const docSnapshot of mealsSnapshot.docs) {
+        const meal = docSnapshot.data();
+        const mealId = docSnapshot.id;
+        let mealUpdated = false;
+        
+        // Check if the meal has items array
+        if (meal.items && Array.isArray(meal.items)) {
+          // Process each food item in the meal
+          const updatedItems = meal.items.map(item => {
+            // Check if the item has a category field to remove
+            if (item.hasOwnProperty('category')) {
+              const { category, ...updatedItem } = item;
+              mealUpdated = true;
+              
+              console.log(`Removed category field from food item [${item.id || item.name}] in meal [${mealId}]`);
+              
+              // Return updated item without category field
+              return updatedItem;
+            }
+            
+            // Return item unchanged if no category field
+            return item;
+          });
+          
+          // If any items were updated, save the meal back to Firebase
+          if (mealUpdated) {
+            await updateDoc(doc(this.db, "submitted-meals", mealId), {
+              items: updatedItems,
+              updatedAt: new Date().toISOString(),
+              categoryDeletedAt: new Date().toISOString() // Mark when category deletion was performed
+            });
+            
+            mealsUpdated++;
+          }
+        }
+      }
+      
+      console.log(`Category deletion procedure completed:`);
+      console.log(`- Food items: ${foodItemsProcessed} processed, ${foodItemsUpdated} updated`);
+      console.log(`- Meals: ${mealsProcessed} processed, ${mealsUpdated} updated`);
+      
+      return {
+        success: true,
+        foodItemsProcessed,
+        foodItemsUpdated,
+        mealsProcessed,
+        mealsUpdated
+      };
+    } catch (error) {
+      console.error("Error during category deletion procedure:", error);
+      return {
+        success: false,
+        foodItemsProcessed: 0,
+        foodItemsUpdated: 0,
+        mealsProcessed: 0,
+        mealsUpdated: 0,
+        message: `Category deletion failed: ${error.message}`
+      };
+    }
+  }
 }
