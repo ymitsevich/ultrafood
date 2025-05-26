@@ -7,7 +7,7 @@ test.describe('Amount Modal functionality', () => {
     await page.goto('/');
     
     // Wait for the page to load
-    await page.waitForSelector('.food-grid', { timeout: 10000 });
+    await page.waitForSelector('.food-grid', { timeout: 3000 }); // Reduced from 10000
     
     // Close any initial modals like language selector
     try {
@@ -16,7 +16,7 @@ test.describe('Amount Modal functionality', () => {
         if (await button.isVisible()) {
           await button.click();
           console.log('Closed an initial modal');
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(200); // Reduced from 500
         }
       }
     } catch (e) {
@@ -50,7 +50,7 @@ test.describe('Amount Modal functionality', () => {
       console.log(`Clicked on ${foodName}`);
       
       // Wait a moment
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(200); // Reduced from 1000
       
       // Look for the amount modal or input
       const amountButtons = await page.locator('.amount-btn').all();
@@ -71,7 +71,7 @@ test.describe('Amount Modal functionality', () => {
           console.log('Added custom amount: 42g');
           
           // Check if item was added with custom amount
-          await page.waitForTimeout(1000);
+          await page.waitForTimeout(500); // Reduced from 1000
           const basketItemAmount = await page.locator('.basket-item-amount').first().textContent();
           console.log(`Resulting basket item amount: ${basketItemAmount}`);
           
@@ -84,7 +84,7 @@ test.describe('Amount Modal functionality', () => {
           console.log('Clicked an amount button');
           
           // Check if item was added
-          await page.waitForTimeout(1000);
+          await page.waitForTimeout(500); // Reduced from 1000
           const basketItem = await page.locator('.basket-item').isVisible();
           console.log(`Basket item visible after clicking amount button: ${basketItem}`);
         }

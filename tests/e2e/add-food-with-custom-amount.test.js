@@ -7,13 +7,13 @@ test.describe('Custom amount functionality', () => {
     await page.goto('/');
     
     // Wait for the page to load (food grid should be visible)
-    await page.waitForSelector('.food-grid', { timeout: 10000 });
+    await page.waitForSelector('.food-grid', { timeout: 3000 }); // Reduced from 10000
     
     // Close any language modal if present
     const languageModalSelector = '.modal-content.language-modal';
     if (await page.locator(languageModalSelector).isVisible()) {
       await page.locator(`${languageModalSelector} .close-modal`).click();
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(200); // Reduced from 500
     }
     
     // Test setup: ensure we have an empty basket to start
@@ -36,7 +36,7 @@ test.describe('Custom amount functionality', () => {
       const closeButton = modal.locator('.close-modal');
       if (await closeButton.isVisible()) {
         await closeButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(200); // Reduced from 500
       }
     }
     
@@ -53,7 +53,7 @@ test.describe('Custom amount functionality', () => {
     console.log('Clicked the config button to open amount modal');
 
     // Wait a moment for any animations
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500); // Reduced from 1000
     
     // Take a screenshot after clicking the config button
     await page.screenshot({ path: 'test-results/amount-modal-0.png' });
@@ -98,7 +98,7 @@ test.describe('Custom amount functionality', () => {
     }
 
     // Wait for the basket to update
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500); // Reduced from 1000
     
     // Take a screenshot after selecting the amount
     await page.screenshot({ path: 'test-results/after-click.png' });

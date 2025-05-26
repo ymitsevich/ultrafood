@@ -22,7 +22,7 @@ test('Debug UI elements and interactions', async ({ page }) => {
   await page.goto('/');
   
   // Wait for the food grid to load
-  await page.waitForSelector('.food-grid', { timeout: 10000 });
+  await page.waitForSelector('.food-grid', { timeout: 3000 }); // Reduced from 10000
   
   // Log page title and URL to confirm we're on the right page
   console.log('Page title:', await page.title());
@@ -47,8 +47,8 @@ test('Debug UI elements and interactions', async ({ page }) => {
     console.log('Food button clicked');
     
     // Wait to see if any modal appears
-    await page.waitForTimeout(2000);
-    console.log('Waited 2 seconds after click');
+    await page.waitForTimeout(1000); // Reduced from 2000
+    console.log('Waited 1 second after click');
     
     // Check DOM for modals
     const modalCount = await page.locator('.modal').count();

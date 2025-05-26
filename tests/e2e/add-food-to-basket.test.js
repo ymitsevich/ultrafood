@@ -7,7 +7,7 @@ test.describe('Basket functionality', () => {
     await page.goto('/');
     
     // Wait for the page to load (food grid should be visible)
-    await page.waitForSelector('.food-grid', { timeout: 10000 });
+    await page.waitForSelector('.food-grid', { timeout: 3000 }); // Reduced from 10000
     
     // Check if language modal appears and close it
     const languageModalSelector = '.modal-content.language-modal';
@@ -16,7 +16,7 @@ test.describe('Basket functionality', () => {
       await page.locator(`${languageModalSelector} .close-modal`).click();
       
       // Wait for the modal to disappear
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(200); // Reduced from 500
     }
     
     // Get the first food item and its name
@@ -32,7 +32,7 @@ test.describe('Basket functionality', () => {
     console.log('Food item clicked');
     
     // Wait a moment and take screenshot after clicking
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500); // Reduced from 1000
     await page.screenshot({ path: 'test-results/after-click.png' });
     
     // Check for visible modals only
@@ -70,9 +70,9 @@ test.describe('Basket functionality', () => {
             if (await closeButton.isVisible()) {
               await closeButton.click();
               console.log('Closed modal and will try clicking food item again');
-              await page.waitForTimeout(500);
+              await page.waitForTimeout(200); // Reduced from 500
               await firstFoodItem.click();
-              await page.waitForTimeout(1000);
+              await page.waitForTimeout(500); // Reduced from 1000
             }
           }
         } catch (error) {
@@ -85,7 +85,7 @@ test.describe('Basket functionality', () => {
     await page.screenshot({ path: 'test-results/basket-area.png' });
     
     // Wait for basket to be updated and check for any items
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500); // Reduced from 1000
     
     // Check if basket has any items
     const basketItemCount = await page.locator('.basket-item').count();

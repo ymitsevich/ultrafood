@@ -45,7 +45,12 @@ export class CloudinaryImageHostingService extends ImageHostingService {
     
     // Sanitize the itemId to avoid issues with special characters
     const sanitizedId = this.sanitizeFilename(itemId);
-    formData.append('public_id', sanitizedId);
+    
+    // For edit operations, append timestamp to ensure unique public_id
+    // This forces Cloudinary to create a new image instead of returning existing one
+    const timestamp = Date.now();
+    const uniquePublicId = `${sanitizedId}-${timestamp}`;
+    formData.append('public_id', uniquePublicId);
     
     try {
       const response = await fetch(

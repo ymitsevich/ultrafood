@@ -79,6 +79,8 @@
         
         calories = foodItem.calories || "";
         imageData = null;
+        // Reset imageBlob only if we're not in the middle of an edit session
+        imageBlob = null;
         
         // Set the image if available
         if (foodItem.imageUrl || foodItem.image) {
@@ -278,21 +280,31 @@
         // Default to existing image URL
         let imageUrl = foodItem.imageUrl || foodItem.image;
         
+        console.log("=== processAndUploadImage DEBUG ===");
+        console.log("imageBlob:", imageBlob);
+        console.log("selectedPixabayImage:", selectedPixabayImage);
+        console.log("foodItem.imageUrl:", foodItem.imageUrl);
+        console.log("foodItem.image:", foodItem.image);
+        
         try {
-            if (selectedPixabayImage && selectedPixabayImage.id !== foodItem.id) {
-                // User selected a new Pixabay image
-                console.log("Uploading Pixabay image");
-                const smallImageUrl = selectedPixabayImage.smallImageUrl || selectedPixabayImage.previewURL;
-                imageBlob = await fetchImageAsBlob(smallImageUrl);
-                // Use the food item's ID to ensure we overwrite the existing image
-                imageUrl = await uploadImage(imageBlob, foodItem.id);
-                console.log("New image URL from Pixabay:", imageUrl);
-            } else if (imageBlob) {
+            // Check if user uploaded a local image file
+            if (imageBlob) {
                 // User uploaded a local image
-                console.log("Uploading local image blob");
-                // Use the food item's ID to ensure we overwrite the existing image
+                console.log("Uploading local image blob, size:", imageBlob.size, "type:", imageBlob.type);
                 imageUrl = await uploadImage(imageBlob, foodItem.id);
                 console.log("New image URL from local upload:", imageUrl);
+            } 
+            // Check if user selected a different Pixabay image
+            else if (selectedPixabayImage && selectedPixabayImage.smallImageUrl !== (foodItem.imageUrl || foodItem.image)) {
+                // User selected a new Pixabay image (different from current one)
+                console.log("Uploading new Pixabay image");
+                console.log("selectedPixabayImage.smallImageUrl:", selectedPixabayImage.smallImageUrl);
+                console.log("Current food image URL:", foodItem.imageUrl || foodItem.image);
+                const smallImageUrl = selectedPixabayImage.smallImageUrl || selectedPixabayImage.previewURL;
+                imageBlob = await fetchImageAsBlob(smallImageUrl);
+                console.log("Fetched Pixabay image as blob, size:", imageBlob.size, "type:", imageBlob.type);
+                imageUrl = await uploadImage(imageBlob, foodItem.id);
+                console.log("New image URL from Pixabay:", imageUrl);
             } else {
                 // No new image selected, keeping existing URL
                 console.log("No new image detected, keeping existing URL:", imageUrl);
@@ -302,6 +314,7 @@
             throw new Error("Failed to upload image: " + error.message);
         }
         
+        console.log("=== END DEBUG ===");
         return imageUrl;
     }
     

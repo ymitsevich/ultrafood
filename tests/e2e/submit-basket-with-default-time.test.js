@@ -7,13 +7,13 @@ test.describe('Basket submission functionality', () => {
     await page.goto('/');
     
     // Wait for the page to load (food grid should be visible)
-    await page.waitForSelector('.food-grid', { timeout: 10000 });
+    await page.waitForSelector('.food-grid', { timeout: 3000 }); // Reduced from 10000
     
     // Close any language modal if present
     const languageModalSelector = '.modal-content.language-modal';
     if (await page.locator(languageModalSelector).isVisible()) {
       await page.locator(`${languageModalSelector} .close-modal`).click();
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(200); // Reduced from 500
     }
     
     // Test setup: ensure we have an empty basket to start
@@ -33,7 +33,7 @@ test.describe('Basket submission functionality', () => {
       for (const button of closeButtons) {
         if (await button.isVisible()) {
           await button.click();
-          await page.waitForTimeout(300);
+          await page.waitForTimeout(200); // Reduced from 500
         }
       }
     } catch (error) {
@@ -51,7 +51,7 @@ test.describe('Basket submission functionality', () => {
     // Handle amount selection if a modal appears
     try {
       // Wait a short time for modal to appear
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(200); // Reduced from 300
       
       // Check if an amount modal is visible (but don't throw if multiple found)
       const amountModal = await page.locator('.modal-content').first();
@@ -72,7 +72,7 @@ test.describe('Basket submission functionality', () => {
     }
     
     // Wait a short time for basket to update
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(200); // Reduced from 300
     
     // Take a screenshot of the basket with items
     await page.screenshot({ path: 'test-results/submit-basket-with-items.png' });
@@ -95,7 +95,7 @@ test.describe('Basket submission functionality', () => {
             await button.click({ force: true });
             
             // Wait for submission to process
-            await page.waitForTimeout(500);
+            await page.waitForTimeout(300); // Reduced from 500
             console.log('Submission completed');
             
             // Test passed if we got this far without errors
@@ -108,7 +108,7 @@ test.describe('Basket submission functionality', () => {
         if (submitButtons.length > 0) {
           console.log('No visible submit buttons, trying first one anyway');
           await submitButtons[0].click({ force: true });
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(300); // Reduced from 500
           expect(true).toBe(true);
         } else {
           throw new Error('No submit buttons found in the UI');
