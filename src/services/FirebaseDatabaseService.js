@@ -660,57 +660,60 @@ export class FirebaseDatabaseService extends DatabaseService {
   }
 
   /**
-   * Backdate categories to tags for all food items
+   * Migrate categories to tags for all food items
    * This function scans all food items and moves category values to tags array
-   * @returns {Promise<{success: boolean, processedCount: number, updatedCount: number, message?: string}>}
+   * @returns {Object} Migration results with statistics
    */
-  async backdateCategoryToTags() {
-    // Check if Firebase is available
-    if (!this.db || !this.isFirebaseInitialized) {
-      return { 
-        success: false, 
-        processedCount: 0,
-        updatedCount: 0,
-        message: "Database not available. Please try again later." 
-      };
+  async migrateCategoryToTags() {
+    if (!this.db) {
+      throw new Error('Firebase not initialized');
     }
-    
+
     try {
-      console.log('Starting category to tags backdating procedure...');
+      console.log('Starting category to tags migration procedure...');
       
-      // Step 1: Get all food items
-      const foodItemsSnapshot = await getDocs(collection(this.db, "food-items"));
-      const processedCount = foodItemsSnapshot.docs.length;
+      const foodItemsRef = collection(this.db, 'foodItems');
+      const snapshot = await getDocs(foodItemsRef);
+      
+      let processedCount = 0;
       let updatedCount = 0;
+      const batch = writeBatch(this.db);
       
-      // Step 2: Process each food item
-      for (const docSnapshot of foodItemsSnapshot.docs) {
-        const foodItem = docSnapshot.data();
-        const foodId = docSnapshot.id;
+      snapshot.forEach((doc) => {
+        const foodId = doc.id;
+        const foodItem = doc.data();
+        processedCount++;
         
         // Check if the item has a category field and needs updating
         if (foodItem.category && typeof foodItem.category === 'string') {
           // Initialize tags array if it doesn't exist
-          let tags = foodItem.tags || [];
+          let tags = Array.isArray(foodItem.tags) ? [...foodItem.tags] : [];
           
           // Only add category to tags if it's not already present
           if (!tags.includes(foodItem.category)) {
             tags.push(foodItem.category);
             
-            // Update the food item in Firebase
-            await updateDoc(doc(this.db, "food-items", foodId), {
+            // Update the document in the batch
+            const docRef = doc.ref;
+            batch.update(docRef, {
               tags: tags,
               updatedAt: new Date().toISOString(),
-              backdatedAt: new Date().toISOString() // Mark when backdating was performed
+              categoryMigratedAt: new Date().toISOString()
             });
             
-            updatedCount++;
             console.log(`Updated food item [${foodId}]: added category "${foodItem.category}" to tags`);
+            updatedCount++;
           }
         }
+      });
+      
+      // Commit the batch if there are updates
+      if (updatedCount > 0) {
+        await batch.commit();
+        console.log(`Batch committed: ${updatedCount} food items updated`);
       }
       
-      console.log(`Backdating procedure completed: ${processedCount} items processed, ${updatedCount} items updated`);
+      console.log(`Category to tags migration completed: ${updatedCount}/${processedCount} food items updated`);
       
       return {
         success: true,
@@ -718,54 +721,45 @@ export class FirebaseDatabaseService extends DatabaseService {
         updatedCount
       };
     } catch (error) {
-      console.error("Error during backdating procedure:", error);
-      return {
-        success: false,
-        processedCount: 0,
-        updatedCount: 0,
-        message: `Backdating failed: ${error.message}`
-      };
+      console.error('Error during category to tags migration:', error);
+      throw error;
     }
   }
 
   /**
-   * Backdate categories to tags for food items within submitted meals
+   * Migrate categories to tags for food items within submitted meals
    * This function scans all submitted meals and moves category values to tags array for food items
-   * @returns {Promise<{success: boolean, processedCount: number, updatedCount: number, message?: string}>}
+   * @returns {Object} Migration results with statistics
    */
-  async backdateMealCategoryToTags() {
-    // Check if Firebase is available
-    if (!this.db || !this.isFirebaseInitialized) {
-      return { 
-        success: false, 
-        processedCount: 0,
-        updatedCount: 0,
-        message: "Database not available. Please try again later." 
-      };
+  async migrateMealCategoryToTags() {
+    if (!this.db) {
+      throw new Error('Firebase not initialized');
     }
-    
+
     try {
-      console.log('Starting meal category to tags backdating procedure...');
+      console.log('Starting meal category to tags migration procedure...');
       
-      // Step 1: Get all submitted meals
-      const mealsSnapshot = await getDocs(collection(this.db, "submitted-meals"));
-      const processedCount = mealsSnapshot.docs.length;
+      const mealsRef = collection(this.db, 'submittedMeals');
+      const snapshot = await getDocs(mealsRef);
+      
+      let processedCount = 0;
       let updatedCount = 0;
+      const updatePromises = [];
       
-      // Step 2: Process each submitted meal
-      for (const docSnapshot of mealsSnapshot.docs) {
-        const meal = docSnapshot.data();
+      snapshot.forEach((docSnapshot) => {
         const mealId = docSnapshot.id;
-        let mealUpdated = false;
+        const meal = docSnapshot.data();
+        processedCount++;
         
-        // Check if the meal has items array
         if (meal.items && Array.isArray(meal.items)) {
-          // Process each food item in the meal
+          let mealUpdated = false;
+          
+          // Create updated items array with migrated tags
           const updatedItems = meal.items.map(item => {
             // Check if the item has a category field and needs updating
             if (item.category && typeof item.category === 'string') {
               // Initialize tags array if it doesn't exist
-              let tags = item.tags || [];
+              let tags = Array.isArray(item.tags) ? [...item.tags] : [];
               
               // Only add category to tags if it's not already present
               if (!tags.includes(item.category)) {
@@ -773,33 +767,33 @@ export class FirebaseDatabaseService extends DatabaseService {
                 mealUpdated = true;
                 
                 console.log(`Updated food item [${item.id || item.name}] in meal [${mealId}]: added category "${item.category}" to tags`);
-                
-                // Return updated item with new tags
-                return {
-                  ...item,
-                  tags: tags
-                };
               }
+              
+              return { ...item, tags };
             }
-            
-            // Return item unchanged if no updates needed
             return item;
           });
           
-          // If any items were updated, save the meal back to Firebase
+          // If any items were updated, add the update to promises array
           if (mealUpdated) {
-            await updateDoc(doc(this.db, "submitted-meals", mealId), {
+            const updatePromise = updateDoc(doc(this.db, "submitted-meals", mealId), {
               items: updatedItems,
               updatedAt: new Date().toISOString(),
-              mealBackdatedAt: new Date().toISOString() // Mark when meal backdating was performed
+              mealMigratedAt: new Date().toISOString() // Mark when meal migration was performed
             });
             
+            updatePromises.push(updatePromise);
             updatedCount++;
           }
         }
+      });
+      
+      // Wait for all updates to complete
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
       }
       
-      console.log(`Meal backdating procedure completed: ${processedCount} meals processed, ${updatedCount} meals updated`);
+      console.log(`Meal migration procedure completed: ${processedCount} meals processed, ${updatedCount} meals updated`);
       
       return {
         success: true,
@@ -807,12 +801,12 @@ export class FirebaseDatabaseService extends DatabaseService {
         updatedCount
       };
     } catch (error) {
-      console.error("Error during meal backdating procedure:", error);
+      console.error("Error during meal migration procedure:", error);
       return {
         success: false,
         processedCount: 0,
         updatedCount: 0,
-        message: `Meal backdating failed: ${error.message}`
+        message: `Meal migration failed: ${error.message}`
       };
     }
   }

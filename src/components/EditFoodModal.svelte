@@ -18,12 +18,12 @@
     export let foodItem = null;
     export let onSave;
     export let onDelete;
-    export let categories = []; // Now treated as available tags
+    export let availableTags = []; // Renamed from categories to availableTags
 
     // Local state
     let foodName = "";
     let imageSearchQuery = ""; 
-    let selectedTags = []; // Changed from selectedCategory to selectedTags array
+    let selectedTags = []; // Array of selected tags for this food item
     let calories = "";
     let fileInput;
     let nameInput;
@@ -67,12 +67,9 @@
         foodName = foodItem.name || "";
         imageSearchQuery = foodItem.name || "";
         
-        // Initialize selected tags from either tags array or legacy category
+        // Initialize selected tags from tags array
         if (foodItem.tags && Array.isArray(foodItem.tags) && foodItem.tags.length > 0) {
             selectedTags = [...foodItem.tags];
-        } else if (foodItem.category) {
-            // If coming from legacy data with only category, convert to tags
-            selectedTags = [foodItem.category];
         } else {
             selectedTags = [];
         }
@@ -320,21 +317,13 @@
     
     // Create updated food item object
     function createUpdatedFoodItem(imageUrl) {
-        // Add the tags array to the food item
         return {
-            id: foodItem.id, // Keep the same ID
+            id: foodItem.id,
             name: foodName.trim(),
-            tags: selectedTags, // Use tags array instead of category
-            category: selectedTags.length > 0 ? selectedTags[0] : "", // Keep category for backwards compatibility
+            tags: selectedTags,
             image: imageUrl,
-            imageUrl: imageUrl, // Ensure both image and imageUrl are set to the same value
+            imageUrl: imageUrl,
             calories: calories ? parseInt(calories, 10) : null,
-            // Preserve other properties
-            ...Object.fromEntries(
-                Object.entries(foodItem).filter(([key]) => 
-                    !['id', 'name', 'tags', 'category', 'image', 'imageUrl', 'calories'].includes(key)
-                )
-            )
         };
     }
 
@@ -427,7 +416,7 @@
                 </button>
             </div>
             
-            <!-- Tags input replaces category dropdown -->
+            <!-- Tags input section -->
             <div class="form-group">
                 <label>{$i18n('tags')}:</label>
                 
@@ -440,7 +429,7 @@
                         </div>
                     {/each}
                     
-                    <!-- Inline tag input - cleaner design -->
+                    <!-- Inline tag input -->
                     <div class="inline-tag-input">
                         <input
                             type="text"
@@ -451,17 +440,17 @@
                     </div>
                 </div>
                 
-                <!-- Quick tag selection - horizontal scrolling for available tags -->
+                <!-- Quick tag selection from available tags -->
                 <div class="quick-tags-container">
                     <div class="quick-tags">
-                        {#each categories.filter(cat => !selectedTags.includes(cat)) as category}
+                        {#each availableTags.filter(tag => !selectedTags.includes(tag)) as tag}
                             <button 
                                 class="quick-tag-btn" 
                                 on:click={() => {
-                                    selectedTags = [...selectedTags, category];
+                                    selectedTags = [...selectedTags, tag];
                                 }}
                             >
-                                {category}
+                                {tag}
                             </button>
                         {/each}
                     </div>

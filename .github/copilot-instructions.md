@@ -7,7 +7,7 @@ Food Tracker Kit is a modern, progressive web application built with Svelte for 
 - Log meals by adding foods to a basket with custom amounts
 - Track eating history with timestamps
 - Export data for analysis
-- Manage food categories and search/discover new foods
+- Manage food tags and search/discover new foods
 
 ## Architecture & Design Patterns
 
@@ -38,7 +38,7 @@ Three main service interfaces with multiple implementations:
 ### Component Architecture
 - **Main App**: `MealLoggerApp.svelte` - Root component with state management
 - **Sidebar**: `BasketSidebar.svelte` - Shopping cart-style meal building
-- **Food Grid**: `FoodGrid.svelte` - Food item display with categories
+- **Food Grid**: `FoodGrid.svelte` - Food item display with tags
 - **Modals**: Reusable modal components for specific functions
 - **Services**: Injected via Svelte context, accessed with `getContext('services')`
 
@@ -49,7 +49,7 @@ Three main service interfaces with multiple implementations:
 {
   id: string,           // Unique identifier
   name: string,         // Display name
-  tags: string[],       // Tag-based categorization
+  tags: string[],       // Tag-based categorization (multiple tags allowed)
   imageUrl?: string,    // Hosted image URL
   imageData?: string,   // Local image data URL
   calories?: number,    // Nutritional info
@@ -69,13 +69,13 @@ Three main service interfaces with multiple implementations:
 ## Core Application Flow
 
 ### Food Management
-1. Foods organized by categories (now transitioning to tag-based system)
-2. "Recent" virtual category shows recently eaten foods
+1. Foods organized by tags (tag-based system with multiple tags per food)
+2. "Recent" virtual tag shows recently eaten foods
 3. Foods can be added via manual entry or image search
 4. Images handled through ImageHostingService abstraction
 
 ### Meal Logging Process
-1. **Food Selection**: Browse categories, click food items
+1. **Food Selection**: Browse tags, click food items
 2. **Basket Management**: Foods added to basket (Svelte store)
 3. **Amount Configuration**: Modal for specifying quantities
 4. **Time Selection**: Choose "now" or custom timestamp
@@ -188,7 +188,7 @@ Three main service interfaces with multiple implementations:
 
 ### Data Loading
 - Pagination for large datasets (meals)
-- Virtual "Recent" category for performance
+- Virtual "Recent" tag for performance
 - Debounced search inputs
 
 ### Bundle Size

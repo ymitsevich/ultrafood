@@ -32,28 +32,15 @@
     // Menu state
     let showMenu = false;
     
-    // Function to get initial food data with empty categories - moved from foodData.js
-    function getFoodData() {
-        return {
-            fruit: [],
-            vegetables: [],
-            proteins: [],
-            grains: [],
-            dairy: [],
-            snacks: [],
-            drinks: [],
-        };
-    }
+    // Food data organized by tags only
+    let foodData = {}; // Will be populated with tag-based organization
     
-    // Food data and category state
-    let foodData = getFoodData();
-    
-    // Recent foods special virtual category
+    // Recent foods special virtual tag
     const RECENT_CATEGORY = "recent";
     let recentFoods = []; // Will store recent foods
     
-    // Current category/tag state - now using tags from database
-    let currentCategory = RECENT_CATEGORY;
+    // Current tag state - using tags from database
+    let currentTag = RECENT_CATEGORY;
     let availableTags = []; // Will store tags from database
     let isLoadingTags = false;
     let tagLoadError = null;
@@ -66,15 +53,15 @@
     // Maximum number of recent items to display
     const MAX_RECENT_ITEMS = 40;
     
-    // New category modal state
-    let showAddCategoryModal = false;
-    let newCategoryName = '';
+    // Add tag modal state (replacing category modal)
+    let showAddTagModal = false;
+    let newTagName = '';
     
     // Store for submitted meals
     let submittedMeals = [];
     let isLoadingMeals = false;
     let mealLoadError = null;
-    const MEALS_PER_PAGE = 20; // Increased from 5 to 20 to provide more recent food items
+    const MEALS_PER_PAGE = 20;
     let showSubmittedMealsModal = false;
     
     // Language modal state
@@ -99,7 +86,7 @@
             action: openLanguageModal
         },
         {
-            type: 'divider' // Add a divider before the Logged Meals option
+            type: 'divider'
         },
         {
             icon: '📋',
@@ -107,7 +94,7 @@
             action: openSubmittedMealsModal
         },
         {
-            type: 'divider' // Add a divider after the Logged Meals option
+            type: 'divider'
         },
         {
             icon: '💾',
@@ -125,7 +112,7 @@
             action: openDailyExportModal
         },
         {
-            type: 'divider' // Add a divider before the backdating option
+            type: 'divider'
         },
         {
             icon: '🔄',
@@ -148,45 +135,14 @@
             // Load tags from database first
             await loadTags();
             
-            // Get food items from database with timeout
-            const firestoreItems = await database.getFoodItems();
+            // Get food items from database
+            const foodItems = await database.getFoodItems();
             
-            if (firestoreItems && firestoreItems.length > 0) {
-                console.log('Loaded food items from database:', firestoreItems);
+            if (foodItems && foodItems.length > 0) {
+                console.log('Loaded food items from database:', foodItems);
                 
-                // Add each item to the appropriate category
-                firestoreItems.forEach(item => {
-                    // Skip undefined items or items without id or name
-                    if (!item || !item.id || !item.name) {
-                        console.warn('Skipping invalid food item:', item);
-                        return;
-                    }
-                    
-                    const category = item.category || Object.keys(foodData)[0]; // Default to first category
-                    
-                    // Create category if it doesn't exist
-                    if (!foodData[category]) {
-                        foodData[category] = [];
-                    }
-                    
-                    // Add item to category if it's not already there
-                    const existingIndex = foodData[category].findIndex(f => f.id === item.id);
-                    if (existingIndex >= 0) {
-                        // Update existing item
-                        foodData[category][existingIndex] = { ...item };
-                    } else {
-                        // Add new item
-                        foodData[category].push(item);
-                    }
-                });
-                
-                // Filter out any undefined items that might have slipped in
-                Object.keys(foodData).forEach(category => {
-                    foodData[category] = foodData[category].filter(item => item && item.id && item.name);
-                });
-                
-                // Update foodData to trigger reactivity
-                foodData = { ...foodData };
+                // Organize food items by tags
+                organizeFoodByTags(foodItems);
             } else {
                 console.log('No items from database, using default data');
                 usingLocalData = true;
@@ -211,6 +167,49 @@
             window.removeEventListener('foodDataRefresh', handleFoodDataRefresh);
         };
     });
+
+    // Organize food items by their tags
+    function organizeFoodByTags(foodItems) {
+        // Reset food data
+        foodData = {};
+        
+        foodItems.forEach(item => {
+            if (!item || !item.id || !item.name) {
+                console.warn('Skipping invalid food item:', item);
+                return;
+            }
+            
+            // Handle items with tags
+            if (item.tags && Array.isArray(item.tags) && item.tags.length > 0) {
+                item.tags.forEach(tag => {
+                    if (!foodData[tag]) {
+                        foodData[tag] = [];
+                    }
+                    
+                    // Add item to tag group if not already there
+                    const existingIndex = foodData[tag].findIndex(f => f.id === item.id);
+                    if (existingIndex < 0) {
+                        foodData[tag].push(item);
+                    }
+                });
+            } else {
+                // Items without tags - create an "untagged" group
+                const untaggedGroup = 'untagged';
+                if (!foodData[untaggedGroup]) {
+                    foodData[untaggedGroup] = [];
+                }
+                foodData[untaggedGroup].push(item);
+            }
+        });
+        
+        // Filter out any undefined items
+        Object.keys(foodData).forEach(tag => {
+            foodData[tag] = foodData[tag].filter(item => item && item.id && item.name);
+        });
+        
+        // Update foodData to trigger reactivity
+        foodData = { ...foodData };
+    }
 
     // Load tags from database
     async function loadTags() {
@@ -239,11 +238,7 @@
 
     // Get food items for a specific tag
     function getFoodItemsForTag(tagName) {
-        // Filter all food items to find those with the specified tag
-        const allFoodItems = Object.values(foodData).flat();
-        return allFoodItems.filter(item => 
-            item.tags && Array.isArray(item.tags) && item.tags.includes(tagName)
-        );
+        return foodData[tagName] || [];
     }
     
     // Toggle menu
@@ -307,14 +302,11 @@
     
     // Extract and update recent foods from submitted meals
     function updateRecentFoods() {
-        // Create a map to track unique foods by ID
         const uniqueFoods = new Map();
         
-        // Process each meal, most recent first
         submittedMeals.forEach(meal => {
             if (meal.items && Array.isArray(meal.items)) {
                 meal.items.forEach(item => {
-                    // Only add if not already in the map (keeps most recent instance)
                     if (!uniqueFoods.has(item.id) && item.id && item.name) {
                         uniqueFoods.set(item.id, { ...item });
                     }
@@ -322,7 +314,6 @@
             }
         });
         
-        // Convert map to array and limit to MAX_RECENT_ITEMS
         recentFoods = Array.from(uniqueFoods.values()).slice(0, MAX_RECENT_ITEMS);
         console.log(`Updated recent foods: ${recentFoods.length} items`);
     }
@@ -332,7 +323,7 @@
         if (!hasNextPage || isLoadingMeals) return;
         
         currentPage++;
-        await loadSubmittedMeals(false); // false means don't reset pagination
+        await loadSubmittedMeals(false);
     }
     
     // Notification system
@@ -445,27 +436,27 @@
         showEditFoodModal = true;
     }
     
-    // Handle add new category (now it adds a new tag group)
-    function addNewCategory() {
-        if (newCategoryName.trim()) {
+    // Handle add new tag (replaces legacy category system)
+    function addNewTag() {
+        if (newTagName.trim()) {
             // Convert to lowercase and replace spaces with underscores for consistency
-            const categoryKey = newCategoryName.trim().toLowerCase().replace(/\s+/g, '_');
+            const tagKey = newTagName.trim().toLowerCase().replace(/\s+/g, '_');
             
-            // Check if category already exists
-            if (!foodData[categoryKey]) {
-                // Create the new category with an empty array
-                foodData[categoryKey] = [];
+            // Check if tag already exists in foodData
+            if (!foodData[tagKey]) {
+                // Create the new tag group with an empty array
+                foodData[tagKey] = [];
                 
                 // Trigger reactivity by creating a new reference
                 foodData = { ...foodData };
                 
-                // Switch to the new category
-                currentCategory = categoryKey;
+                // Switch to the new tag
+                currentTag = tagKey;
             }
             
             // Reset and close modal
-            newCategoryName = '';
-            showAddCategoryModal = false;
+            newTagName = '';
+            showAddTagModal = false;
         }
     }
     
@@ -560,87 +551,71 @@
     }
     
     function handleAddNewFood(newFood) {
-        // If the food item has tags, add it to all relevant tag categories
+        // Add the food to all its tag groups
         if (newFood.tags && Array.isArray(newFood.tags) && newFood.tags.length > 0) {
-            // Make sure each tag category exists and add the food to each
             newFood.tags.forEach(tag => {
                 if (!foodData[tag]) {
                     foodData[tag] = [];
                 }
                 
-                // Check if food already exists in this tag category
                 const existingIndex = foodData[tag].findIndex(item => item.id === newFood.id);
                 if (existingIndex < 0) {
                     foodData[tag].push(newFood);
                 }
             });
         } else {
-            // Legacy behavior: Add the new food to the current category
-            if (!foodData[currentCategory]) {
-                foodData[currentCategory] = [];
+            // Items without tags go to "untagged"
+            const untaggedGroup = 'untagged';
+            if (!foodData[untaggedGroup]) {
+                foodData[untaggedGroup] = [];
             }
-            
-            // Add new food to the current category
-            foodData[currentCategory] = [...foodData[currentCategory], newFood];
+            foodData[untaggedGroup].push(newFood);
         }
         
-        // Create a new reference for the entire foodData object to trigger reactivity
+        // Create a new reference for reactivity
         foodData = { ...foodData };
     }
     
     async function handleSaveEditedFood(updatedFood) {
-        // Store the original food item before updates for comparison
         const originalFood = { ...editingFood };
         let updatedLocalUI = false;
         
-        // Clear food from all categories first (it might have existed in multiple due to tags)
-        for (const category of Object.keys(foodData)) {
-            const itemIndex = foodData[category].findIndex(item => item.id === updatedFood.id);
+        // Clear food from all tag groups first
+        for (const tag of Object.keys(foodData)) {
+            const itemIndex = foodData[tag].findIndex(item => item.id === updatedFood.id);
             if (itemIndex >= 0) {
-                foodData[category].splice(itemIndex, 1);
-                // Remove empty categories
-                if (foodData[category].length === 0) {
-                    delete foodData[category];
+                foodData[tag].splice(itemIndex, 1);
+                // Remove empty tag groups
+                if (foodData[tag].length === 0) {
+                    delete foodData[tag];
                 }
                 updatedLocalUI = true;
             }
         }
         
-        // Now add the food to all its tag categories
+        // Add the food to all its new tag groups
         if (updatedFood.tags && Array.isArray(updatedFood.tags) && updatedFood.tags.length > 0) {
             updatedFood.tags.forEach(tag => {
-                // Create the tag category if it doesn't exist
                 if (!foodData[tag]) {
                     foodData[tag] = [];
                 }
-                
-                // Add the food to the tag category
                 foodData[tag].push(updatedFood);
                 updatedLocalUI = true;
             });
-        } else if (updatedFood.category) {
-            // Legacy behavior: use single category
-            const category = updatedFood.category;
-            
-            // Make sure the category exists
-            if (!foodData[category]) {
-                foodData[category] = [];
+        } else {
+            // Items without tags go to "untagged"
+            const untaggedGroup = 'untagged';
+            if (!foodData[untaggedGroup]) {
+                foodData[untaggedGroup] = [];
             }
-            
-            // Add to category
-            foodData[category].push(updatedFood);
+            foodData[untaggedGroup].push(updatedFood);
             updatedLocalUI = true;
         }
         
-        // If there are no remaining categories after removing empty ones,
-        // switch to the first available category or the RECENT_CATEGORY
-        if (Object.keys(foodData).filter(cat => cat !== RECENT_CATEGORY).length === 0) {
-            currentCategory = RECENT_CATEGORY;
-        } 
-        // If the current category was deleted, switch to another one or to RECENT_CATEGORY
-        else if (!foodData[currentCategory] && currentCategory !== RECENT_CATEGORY) {
-            const availableCategories = Object.keys(foodData).filter(cat => cat !== RECENT_CATEGORY);
-            currentCategory = availableCategories.length > 0 ? availableCategories[0] : RECENT_CATEGORY;
+        // If current tag was deleted, switch to Recent or first available tag
+        if (!foodData[currentTag] && currentTag !== RECENT_CATEGORY) {
+            const availableTagNames = Object.keys(foodData);
+            currentTag = availableTagNames.length > 0 ? availableTagNames[0] : RECENT_CATEGORY;
         }
 
         // Update foodData to trigger reactivity if changes were made
@@ -648,194 +623,54 @@
             foodData = { ...foodData };
         }
         
-        // If not in local-only mode, also update all submitted meals containing this food item
+        // Update submitted meals if in cloud mode
         if (database.isAvailable()) {
             try {
-                // Show loading state or notification
-                const updateStatus = document.createElement('div');
-                updateStatus.textContent = 'Updating submitted meals...';
-                updateStatus.style.position = 'fixed';
-                updateStatus.style.bottom = '20px';
-                updateStatus.style.left = '50%';
-                updateStatus.style.transform = 'translateX(-50%)';
-                updateStatus.style.padding = '10px 16px';
-                updateStatus.style.borderRadius = '8px';
-                updateStatus.style.fontSize = '14px';
-                updateStatus.style.backgroundColor = '#e3f2fd';
-                updateStatus.style.color = '#0d47a1';
-                updateStatus.style.border = '1px solid #bbdefb';
-                updateStatus.style.zIndex = '100';
-                document.body.appendChild(updateStatus);
-                
-                // Update all submitted meals in database that contain this food item
                 await database.updateSubmittedMealsWithFoodItem(originalFood.id, updatedFood);
                 
-                // Refresh the loaded submitted meals to reflect changes
                 if (submittedMeals.length > 0) {
                     await loadSubmittedMeals(true);
                 }
                 
-                // Update notification
-                updateStatus.textContent = 'Submitted meals updated successfully';
-                updateStatus.style.backgroundColor = '#e8f5e9';
-                updateStatus.style.color = '#1b5e20';
-                updateStatus.style.border = '1px solid #c8e6c9';
-                
-                // Remove notification after a delay
-                setTimeout(() => {
-                    document.body.removeChild(updateStatus);
-                }, 3000);
-                
+                showNotification('Food item and submitted meals updated successfully');
             } catch (error) {
                 console.error('Error updating submitted meals:', error);
-                
-                // Show error notification
-                const errorStatus = document.createElement('div');
-                errorStatus.textContent = 'Error updating submitted meals';
-                errorStatus.style.position = 'fixed';
-                errorStatus.style.bottom = '20px';
-                errorStatus.style.left = '50%';
-                errorStatus.style.transform = 'translateX(-50%)';
-                errorStatus.style.padding = '10px 16px';
-                errorStatus.style.borderRadius = '8px';
-                errorStatus.style.fontSize = '14px';
-                errorStatus.style.backgroundColor = '#ffebee';
-                errorStatus.style.color = '#c62828';
-                errorStatus.style.border = '1px solid #ffcdd2';
-                errorStatus.style.zIndex = '100';
-                document.body.appendChild(errorStatus);
-                
-                // Remove error notification after a delay
-                setTimeout(() => {
-                    document.body.removeChild(errorStatus);
-                }, 5000);
+                showNotification('Error updating submitted meals', 'error');
             }
         }
     }
     
     function handleDeleteFood(foodId) {
-        // Find the food in all categories and remove it
-        for (const category of Object.keys(foodData)) {
-            const indexToRemove = foodData[category].findIndex(item => item.id === foodId);
+        // Find the food in all tag categories and remove it
+        for (const tag of Object.keys(foodData)) {
+            const indexToRemove = foodData[tag].findIndex(item => item.id === foodId);
             if (indexToRemove >= 0) {
-                // Remove the item
-                foodData[category].splice(indexToRemove, 1);
+                foodData[tag].splice(indexToRemove, 1);
                 
-                // If the category is now empty, remove it
-                if (foodData[category].length === 0) {
-                    delete foodData[category];
+                // If the tag category is now empty, remove it
+                if (foodData[tag].length === 0) {
+                    delete foodData[tag];
                     
-                    // If we removed the current category, switch to another one
-                    if (category === currentCategory) {
-                        // Find first non-empty category, or default to the first one
-                        const remainingCategories = Object.keys(foodData);
-                        if (remainingCategories.length > 0) {
-                            currentCategory = remainingCategories[0];
-                        }
+                    // If we removed the current tag, switch to another one
+                    if (tag === currentTag) {
+                        const remainingTags = Object.keys(foodData);
+                        currentTag = remainingTags.length > 0 ? remainingTags[0] : RECENT_CATEGORY;
                     }
                 }
                 
                 // Update foodData to trigger reactivity
                 foodData = { ...foodData };
             }
-        }
-    }
-    
-    // Function to run the backdating procedure
-    async function runBackdatingProcedure() {
-        // Check if Firebase is available
-        if (!database.isAvailable()) {
-            showNotification($i18n('localModeActive'), 'error');
-            return;
-        }
-        
-        // Show confirmation dialog
-        const confirmed = confirm($i18n('backdateConfirm'));
-        if (!confirmed) {
-            return;
-        }
-        
-        try {
-            // Show loading notification
-            showNotification($i18n('backdateRunning'));
-            
-            // Call the backdating procedure
-            const result = await database.backdateCategoryToTags();
-            
-            if (result.success) {
-                // Show success notification with statistics
-                showNotification(
-                    $i18n('backdateCompleted') + ' ' + 
-                    $i18n('backdateItemsProcessed', { count: result.processedCount }) + ', ' +
-                    $i18n('backdateItemsUpdated', { count: result.updatedCount })
-                );
-                
-                // Refresh food data to reflect changes
-                await loadFoodData();
-            } else {
-                // Show error notification
-                showNotification(
-                    $i18n('backdateFailed') + (result.message ? ': ' + result.message : ''),
-                    'error'
-                );
-            }
-        } catch (error) {
-            console.error('Error during backdating procedure:', error);
-            showNotification($i18n('backdateFailed') + ': ' + error.message, 'error');
         }
     }
     
     // Helper function to reload food data
     async function loadFoodData() {
         try {
-            // Reset food data
-            foodData = getFoodData();
+            const foodItems = await database.getFoodItems();
             
-            // Get fresh food items from database
-            const firestoreItems = await database.getFoodItems();
-            
-            if (firestoreItems && firestoreItems.length > 0) {
-                // Process each item and organize by tags/categories
-                firestoreItems.forEach(item => {
-                    if (!item || !item.id || !item.name) {
-                        return;
-                    }
-                    
-                    // Handle items with tags (new system)
-                    if (item.tags && Array.isArray(item.tags) && item.tags.length > 0) {
-                        item.tags.forEach(tag => {
-                            if (!foodData[tag]) {
-                                foodData[tag] = [];
-                            }
-                            
-                            // Add item to tag category if not already there
-                            const existingIndex = foodData[tag].findIndex(f => f.id === item.id);
-                            if (existingIndex < 0) {
-                                foodData[tag].push(item);
-                            }
-                        });
-                    } else {
-                        // Handle items with legacy category system
-                        const category = item.category || Object.keys(foodData)[0];
-                        
-                        if (!foodData[category]) {
-                            foodData[category] = [];
-                        }
-                        
-                        const existingIndex = foodData[category].findIndex(f => f.id === item.id);
-                        if (existingIndex < 0) {
-                            foodData[category].push(item);
-                        }
-                    }
-                });
-                
-                // Filter out any undefined items
-                Object.keys(foodData).forEach(category => {
-                    foodData[category] = foodData[category].filter(item => item && item.id && item.name);
-                });
-                
-                // Update foodData to trigger reactivity
-                foodData = { ...foodData };
+            if (foodItems && foodItems.length > 0) {
+                organizeFoodByTags(foodItems);
             }
         } catch (error) {
             console.error('Error reloading food data:', error);
@@ -847,13 +682,8 @@
         console.log('Food data refresh event received, reloading data...');
         
         try {
-            // Reload food data
             await loadFoodData();
-            
-            // Reload tags as well since they might have changed
             await loadTags();
-            
-            // Show success notification
             showNotification('Food data refreshed successfully!');
         } catch (error) {
             console.error('Error refreshing food data:', error);
@@ -874,8 +704,8 @@
         <div class="categories">
             <!-- Always show Recent category first -->
             <button
-                class="category-btn {currentCategory === RECENT_CATEGORY ? 'active' : ''}"
-                on:click={() => currentCategory = RECENT_CATEGORY}
+                class="category-btn {currentTag === RECENT_CATEGORY ? 'active' : ''}"
+                on:click={() => currentTag = RECENT_CATEGORY}
             >
                 {t('recent')}
             </button>
@@ -895,31 +725,25 @@
             {:else if availableTags.length > 0}
                 {#each availableTags as tag}
                     <button
-                        class="category-btn {currentCategory === tag.name ? 'active' : ''}"
-                        on:click={() => currentCategory = tag.name}
+                        class="category-btn {currentTag === tag.name ? 'active' : ''}"
+                        on:click={() => currentTag = tag.name}
                         title="{tag.name} ({tag.count} items)"
                     >
                         {tag.name.charAt(0).toUpperCase() + tag.name.slice(1)}
                     </button>
                 {/each}
             {:else}
-                <!-- Fallback to old category system if no tags available -->
-                {#each Object.entries(foodData).filter(([cat, items]) => items.length > 0 && cat !== RECENT_CATEGORY) as [category, items]}
-                    <button
-                        class="category-btn {currentCategory === category ? 'active' : ''}"
-                        on:click={() => currentCategory = category}
-                        title="{category} ({items.length} items)"
-                    >
-                        {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </button>
-                {/each}
+                <!-- No tags available, show message or fallback content -->
+                <div class="no-tags-message">
+                    <span>{t('noTagsAvailable')}</span>
+                </div>
             {/if}
             
-            <!-- Add Category Button -->
+            <!-- Add Tag Button (replaces Add Category) -->
             <button
                 class="category-btn add-category-btn"
-                on:click={() => showAddCategoryModal = true}
-                title={t('addCategory')}
+                on:click={() => showAddTagModal = true}
+                title={t('addTag')}
             >
                 +
             </button>
@@ -931,17 +755,17 @@
                 <p>{t('loading')}</p>
             </div>
         {:else}
-            <!-- Food Grid Component - Handle Recent Virtual Category and Tags -->
+            <!-- Food Grid Component - Handle Recent Virtual Tag and Tags -->
             <FoodGrid
-                category={currentCategory}
-                foodItems={currentCategory === RECENT_CATEGORY ? recentFoods : 
-                          (availableTags.some(tag => tag.name === currentCategory) ? 
-                           getFoodItemsForTag(currentCategory) : 
-                           (foodData[currentCategory] || []))}
+                tag={currentTag}
+                foodItems={currentTag === RECENT_CATEGORY ? recentFoods : 
+                          (availableTags.some(tag => tag.name === currentTag) ? 
+                           getFoodItemsForTag(currentTag) : 
+                           (foodData[currentTag] || []))}
                 onConfigClick={openAmountModal}
                 onAddNewFood={openAddFoodModal}
                 onEditFood={openEditFoodModal}
-                isVirtualCategory={currentCategory === RECENT_CATEGORY}
+                isVirtualTag={currentTag === RECENT_CATEGORY}
             />
 
             <!-- Show status message if error occurred -->
@@ -982,8 +806,9 @@
     />
     <AddFoodModal
         bind:showModal={showAddFoodModal}
-        currentCategory={currentCategory === RECENT_CATEGORY ? Object.keys(foodData)[0] || '' : currentCategory}
+        currentTag={currentTag === RECENT_CATEGORY ? Object.keys(foodData)[0] || '' : currentTag}
         onAddFood={handleAddNewFood}
+        availableTags={availableTags.map(tag => tag.name)}
     />
     <!-- Edit Food Modal -->
     <EditFoodModal
@@ -991,9 +816,7 @@
         foodItem={editingFood}
         onSave={handleSaveEditedFood}
         onDelete={handleDeleteFood}
-        categories={Object.entries(foodData)
-            .filter(([cat, items]) => items.length > 0 && cat !== RECENT_CATEGORY)
-            .map(([cat]) => cat)}
+        availableTags={availableTags.map(tag => tag.name)}
     />
     <!-- Edit Meal Modal -->
     <EditMealModal
@@ -1080,27 +903,27 @@
         </div>
     {/if}
 
-    <!-- Add Category Modal -->
-    {#if showAddCategoryModal}
+    <!-- Add Tag Modal (replaces Add Category Modal) -->
+    {#if showAddTagModal}
         <div class="modal">
             <div class="modal-content add-category-modal">
-                <span class="close-modal" on:click={() => showAddCategoryModal = false}>&times;</span>
-                <h2>{t('addCategory')}</h2>
+                <span class="close-modal" on:click={() => showAddTagModal = false}>&times;</span>
+                <h2>{t('addTag')}</h2>
 
                 <div class="form-group">
-                    <label for="category-name">{t('categoryName')}</label>
+                    <label for="tag-name">{t('tagName')}</label>
                     <input
                         type="text"
-                        id="category-name"
-                        bind:value={newCategoryName}
-                        placeholder={t('enterCategoryName')}
+                        id="tag-name"
+                        bind:value={newTagName}
+                        placeholder={t('enterTagName')}
                     >
                 </div>
 
                 <div class="form-actions">
-                    <button class="cancel-btn" on:click={() => showAddCategoryModal = false}>{t('cancel')}</button>
-                    <button class="save-btn" on:click={addNewCategory} disabled={!newCategoryName.trim()}>
-                        {t('addCategory')}
+                    <button class="cancel-btn" on:click={() => showAddTagModal = false}>{t('cancel')}</button>
+                    <button class="save-btn" on:click={addNewTag} disabled={!newTagName.trim()}>
+                        {t('addTag')}
                     </button>
                 </div>
             </div>

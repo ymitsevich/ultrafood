@@ -15,12 +15,13 @@
 
     // Exported props
     export let showModal = false;
+    export let currentTag = ""; // Current tag to pre-select
     export let onAddFood;
-    export let currentCategory = "fruit";
+    export let availableTags = []; // Available tags from the tags collection
 
     // Local state
     let foodName = "";
-    let calories = ""; // Added calories field
+    let calories = "";
     let fileInput;
     let nameInput;
     let imageData = null;
@@ -28,8 +29,8 @@
     let isUploading = false;
     let uploadError = null;
     let selectedPixabayImage = null;
-    let selectedTags = []; // NEW: Using tags array instead of single category
-    let newTagInput = ""; // NEW: For adding new tags
+    let selectedTags = [];
+    let newTagInput = "";
 
     // Image resize configuration
     const IMAGE_CONFIG = {
@@ -39,15 +40,10 @@
         compressionStep: 0.1,
     };
     
-    // Initialize with current category as the first tag
-    $: if (currentCategory && showModal && selectedTags.length === 0) {
-        selectedTags = [currentCategory];
-    }
-
     // Reset modal form to initial state
     function resetForm() {
         foodName = "";
-        calories = ""; // Reset calories field
+        calories = "";
         imageData = null;
         imageBlob = null;
         isUploading = false;
@@ -166,7 +162,7 @@
         }
     }
 
-    // NEW: Add a new tag
+    // Add a new tag
     function addTag() {
         if (!newTagInput.trim()) return;
         
@@ -182,12 +178,19 @@
         newTagInput = "";
     }
     
-    // NEW: Remove a tag
+    // Add an existing tag from available tags
+    function addExistingTag(tag) {
+        if (!selectedTags.includes(tag)) {
+            selectedTags = [...selectedTags, tag];
+        }
+    }
+    
+    // Remove a tag
     function removeTag(tag) {
         selectedTags = selectedTags.filter(t => t !== tag);
     }
     
-    // NEW: Handle keydown in the tag input (add tag on Enter)
+    // Handle keydown in the tag input (add tag on Enter)
     function handleTagInputKeydown(event) {
         if (event.key === "Enter") {
             event.preventDefault();
@@ -235,15 +238,13 @@
             const foodId = generateFoodId(foodName.trim());
             console.log(`Generated food ID: ${foodId} for "${foodName}"`);
             
-            // Create the food item
+            // Create the food item with tags-based structure
             const newFood = {
                 id: foodId,
                 name: foodName.trim(),
                 tags: selectedTags, // Use tags array for categorization
-                category: selectedTags.length > 0 ? selectedTags[0] : currentCategory, // Use first tag as category for backward compatibility
                 image: imageUrl,
-                calories: calories ? parseInt(calories, 10) : null, // Add calories to the food item
-                // Add any additional food properties here
+                calories: calories ? parseInt(calories, 10) : null,
             };
 
             // Save the food item to Firebase
@@ -272,6 +273,11 @@
     // Focus on the name input when the modal is opened
     $: if (showModal && nameInput) {
         setTimeout(() => nameInput.focus(), 100);
+    }
+
+    // Auto-select current tag when modal opens
+    $: if (showModal && currentTag && currentTag !== 'recent' && !selectedTags.includes(currentTag)) {
+        selectedTags = [currentTag];
     }
 </script>
 
@@ -309,7 +315,7 @@
             <div class="form-group">
                 <label>{$i18n('tags')}:</label>
                 
-                <!-- Selected tags display as pills -->
+                <!-- Selected tags display as pills with inline input -->
                 <div class="tags-container">
                     {#each selectedTags as tag}
                         <div class="tag-pill">
@@ -318,7 +324,7 @@
                         </div>
                     {/each}
                     
-                    <!-- Inline tag input - cleaner design -->
+                    <!-- Inline tag input -->
                     <div class="inline-tag-input">
                         <input
                             type="text"
@@ -326,6 +332,20 @@
                             bind:value={newTagInput}
                             on:keydown={handleTagInputKeydown}
                         />
+                    </div>
+                </div>
+                
+                <!-- Quick tag selection from available tags -->
+                <div class="quick-tags-container">
+                    <div class="quick-tags">
+                        {#each availableTags.filter(tag => !selectedTags.includes(tag)) as tag}
+                            <button 
+                                class="quick-tag-btn" 
+                                on:click={() => addExistingTag(tag)}
+                            >
+                                {tag}
+                            </button>
+                        {/each}
                     </div>
                 </div>
             </div>
@@ -554,22 +574,47 @@
         flex: 1;
         display: flex;
         align-items: center;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 5px;
         background-color: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 16px;
+        padding: 5px 10px;
+        margin-left: 8px;
     }
     
     .inline-tag-input input {
         border: none;
+        background: transparent;
         outline: none;
         flex: 1;
         padding: 0;
         margin: 0;
-        font-size: 14px;
     }
     
-    .inline-tag-input input::placeholder {
-        color: #bbb;
+    .quick-tags-container {
+        max-height: 40px;
+        overflow-x: auto;
+        padding: 4px 0;
+        margin-top: 8px;
+    }
+    
+    .quick-tags {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+    
+    .quick-tag-btn {
+        background-color: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 16px;
+        padding: 4px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .quick-tag-btn:hover {
+        background-color: #e1f5fe;
+        border-color: #81d4fa;
     }
 </style>

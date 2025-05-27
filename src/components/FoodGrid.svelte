@@ -6,12 +6,12 @@
     import { fly } from 'svelte/transition';
     
     // Component props
-    export let category = '';
+    export let tag = ''; // Changed from category to tag
     export let foodItems = [];
     export let onConfigClick;
     export let onAddNewFood;
     export let onEditFood;
-    export let isVirtualCategory = false; // For virtual categories like "Recent"
+    export let isVirtualTag = false; // Changed from isVirtualCategory to isVirtualTag
     
     // Track UI state
     let loadingImages = {};
@@ -156,8 +156,8 @@
             </div>
         {/each}
         
-        <!-- Add New Food Button - Only show for regular categories -->
-        {#if !isVirtualCategory}
+        <!-- Add New Food Button - Only show for regular tags -->
+        {#if !isVirtualTag}
             <div class="food-item add-new-food">
                 <button class="food-btn add-food-btn" on:click={onAddNewFood}>
                     <div class="add-icon-wrapper">

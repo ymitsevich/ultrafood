@@ -9,27 +9,27 @@ export const DEFAULT_SEED_DATA = {
     {
       id: 'apple-test-123456',
       name: 'Apple',
+      tags: ['fruits'], // Changed from category to tags array
+      emoji: '🍎',
       calories: 52,
-      category: 'fruits',
-      defaultAmount: '100g',
       image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/apple.jpg',
       updatedAt: '2025-01-01T12:00:00.000Z'
     },
     {
       id: 'chicken-breast-test-123457',
       name: 'Chicken Breast',
+      tags: ['meat', 'protein'], // Multiple tags example
+      emoji: '🍗',
       calories: 165,
-      category: 'meat',
-      defaultAmount: '100g',
       image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/chicken.jpg',
       updatedAt: '2025-01-01T12:00:00.000Z'
     },
     {
       id: 'brown-rice-test-123458',
       name: 'Brown Rice',
+      tags: ['grains', 'carbs'], // Multiple tags example
+      emoji: '🍚',
       calories: 112,
-      category: 'grains',
-      defaultAmount: '100g',
       image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/rice.jpg',
       updatedAt: '2025-01-01T12:00:00.000Z'
     }
