@@ -932,4 +932,123 @@ export class FirebaseDatabaseService extends DatabaseService {
       };
     }
   }
+
+  /**
+   * Creates a tags collection from all food items
+   * Groups all unique tags and creates a tags collection with metadata
+   * @returns {Promise<{success: boolean, tagsCreated: number, message?: string}>}
+   */
+  async createTagsCollection() {
+    // Check if Firebase is available
+    if (!this.db || !this.isFirebaseInitialized) {
+      return { 
+        success: false, 
+        tagsCreated: 0,
+        message: "Database not available. Please try again later." 
+      };
+    }
+
+    try {
+      console.log('Starting tags collection creation...');
+      
+      // Step 1: Get all food items
+      const foodItemsSnapshot = await getDocs(collection(this.db, "food-items"));
+      
+      // Step 2: Extract and count all tags
+      const tagCounts = new Map();
+      let totalFoodItems = 0;
+      
+      for (const docSnapshot of foodItemsSnapshot.docs) {
+        const foodItem = docSnapshot.data();
+        totalFoodItems++;
+        
+        // Process tags array if it exists
+        if (foodItem.tags && Array.isArray(foodItem.tags)) {
+          foodItem.tags.forEach(tag => {
+            if (typeof tag === 'string' && tag.trim()) {
+              const normalizedTag = tag.trim().toLowerCase();
+              tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+            }
+          });
+        }
+      }
+      
+      // Step 3: Create tags collection documents
+      let tagsCreated = 0;
+      
+      for (const [tagName, count] of tagCounts.entries()) {
+        const tagDoc = {
+          name: tagName,
+          count: count,
+          createdAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString()
+        };
+        
+        // Use tag name as document ID for easy lookup
+        await setDoc(doc(this.db, "tags", tagName), tagDoc);
+        tagsCreated++;
+        
+        console.log(`Created tag document: ${tagName} (count: ${count})`);
+      }
+      
+      console.log(`Tags collection creation completed: ${tagsCreated} unique tags from ${totalFoodItems} food items`);
+      
+      return {
+        success: true,
+        tagsCreated,
+        totalFoodItems
+      };
+    } catch (error) {
+      console.error("Error during tags collection creation:", error);
+      return {
+        success: false,
+        tagsCreated: 0,
+        message: `Tags collection creation failed: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Retrieves all tags from the tags collection
+   * @returns {Promise<Array>} Promise resolving to an array of tag objects with name and count
+   */
+  async getTags() {
+    // Check if Firebase is available
+    if (!this.db || !this.isFirebaseInitialized) {
+      return [];
+    }
+
+    try {
+      console.log('Getting tags from tags collection...');
+      
+      // Get all tag documents from the tags collection
+      const tagsSnapshot = await getDocs(collection(this.db, "tags"));
+      
+      const tags = [];
+      tagsSnapshot.docs.forEach(doc => {
+        const tagData = doc.data();
+        tags.push({
+          id: doc.id,
+          name: tagData.name || doc.id,
+          count: tagData.count || 0,
+          createdAt: tagData.createdAt,
+          lastUpdated: tagData.lastUpdated
+        });
+      });
+      
+      // Sort tags by count (descending) then by name (ascending)
+      tags.sort((a, b) => {
+        if (b.count !== a.count) {
+          return b.count - a.count;
+        }
+        return a.name.localeCompare(b.name);
+      });
+      
+      console.log(`Retrieved ${tags.length} tags from database`);
+      return tags;
+    } catch (error) {
+      console.error("Error getting tags:", error);
+      return [];
+    }
+  }
 }

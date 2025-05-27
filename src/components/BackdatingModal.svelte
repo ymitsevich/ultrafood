@@ -12,16 +12,19 @@
     let isRunningFoodItems = false;
     let isRunningMeals = false;
     let isRunningDeletion = false;
+    let isRunningTagsCreation = false;
     let foodItemsResult = null;
     let mealsResult = null;
     let deletionResult = null;
+    let tagsCreationResult = null;
     
     function closeModal() {
-        if (!isRunningFoodItems && !isRunningMeals && !isRunningDeletion) {
+        if (!isRunningFoodItems && !isRunningMeals && !isRunningDeletion && !isRunningTagsCreation) {
             showModal = false;
             foodItemsResult = null;
             mealsResult = null;
             deletionResult = null;
+            tagsCreationResult = null;
         }
     }
     
@@ -170,6 +173,53 @@
             isRunningDeletion = false;
         }
     }
+    
+    // Function to run the tags creation procedure
+    async function runTagsCreation() {
+        // Check if Firebase is available
+        if (!database.isAvailable()) {
+            showNotification($i18n('localModeActive'), 'error');
+            return;
+        }
+        
+        try {
+            isRunningTagsCreation = true;
+            tagsCreationResult = null;
+            
+            // Call the tags creation procedure
+            tagsCreationResult = await database.createTagsCollection();
+            
+            if (tagsCreationResult.success) {
+                // Show success notification
+                showNotification(
+                    $i18n('createTagsCompleted') + ' ' + 
+                    $i18n('createTagsCount', { count: tagsCreationResult.tagsCreated }),
+                    'success'
+                );
+                
+                // Trigger a custom event to refresh food data in the main app
+                window.dispatchEvent(new CustomEvent('foodDataRefresh'));
+            } else {
+                // Show error notification
+                showNotification(
+                    $i18n('createTagsFailed') + (tagsCreationResult.message ? ': ' + tagsCreationResult.message : ''),
+                    'error'
+                );
+            }
+        } catch (error) {
+            console.error('Error during tags creation procedure:', error);
+            
+            tagsCreationResult = {
+                success: false,
+                tagsCreated: 0,
+                message: error.message
+            };
+            
+            showNotification($i18n('createTagsFailed') + ': ' + error.message, 'error');
+        } finally {
+            isRunningTagsCreation = false;
+        }
+    }
 </script>
 
 {#if showModal}
@@ -189,7 +239,7 @@
                         <button 
                             class="primary-button" 
                             on:click={runFoodItemsBackdating}
-                            disabled={isRunningFoodItems || isRunningMeals || isRunningDeletion}
+                            disabled={isRunningFoodItems || isRunningMeals || isRunningDeletion || isRunningTagsCreation}
                         >
                             {#if isRunningFoodItems}
                                 <span class="loading-spinner-small"></span>
@@ -220,7 +270,7 @@
                         <button 
                             class="primary-button" 
                             on:click={runMealsBackdating}
-                            disabled={isRunningFoodItems || isRunningMeals || isRunningDeletion}
+                            disabled={isRunningFoodItems || isRunningMeals || isRunningDeletion || isRunningTagsCreation}
                         >
                             {#if isRunningMeals}
                                 <span class="loading-spinner-small"></span>
@@ -251,7 +301,7 @@
                         <button 
                             class="primary-button" 
                             on:click={runCategoryDeletion}
-                            disabled={isRunningFoodItems || isRunningMeals || isRunningDeletion}
+                            disabled={isRunningFoodItems || isRunningMeals || isRunningDeletion || isRunningTagsCreation}
                         >
                             {#if isRunningDeletion}
                                 <span class="loading-spinner-small"></span>
@@ -267,6 +317,37 @@
                                     ✓ {deletionResult.foodItemsUpdated} food items, {deletionResult.mealsUpdated} meals updated
                                 {:else}
                                     ✗ Failed: {deletionResult.message}
+                                {/if}
+                            </div>
+                        {/if}
+                    </div>
+                </div>
+                
+                <!-- Tags Creation -->
+                <div class="backdating-option">
+                    <h3>Tags Creation</h3>
+                    <p class="option-description">Create tags for all food items based on categories</p>
+                    
+                    <div class="option-actions">
+                        <button 
+                            class="primary-button" 
+                            on:click={runTagsCreation}
+                            disabled={isRunningFoodItems || isRunningMeals || isRunningDeletion || isRunningTagsCreation}
+                        >
+                            {#if isRunningTagsCreation}
+                                <span class="loading-spinner-small"></span>
+                                {$i18n('createTagsRunning')}
+                            {:else}
+                                Create Tags Collection
+                            {/if}
+                        </button>
+                        
+                        {#if tagsCreationResult}
+                            <div class="result-status {tagsCreationResult.success ? 'success' : 'error'}">
+                                {#if tagsCreationResult.success}
+                                    ✓ {tagsCreationResult.tagsCreated} tags created
+                                {:else}
+                                    ✗ Failed: {tagsCreationResult.message}
                                 {/if}
                             </div>
                         {/if}

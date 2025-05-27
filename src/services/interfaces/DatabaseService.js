@@ -109,4 +109,21 @@ export class DatabaseService {
   isAvailable() {
     throw new Error('Method isAvailable() must be implemented');
   }
+
+  /**
+   * Creates a tags collection from all food items
+   * Groups all unique tags and creates a tags collection with metadata
+   * @returns {Promise<{success: boolean, tagsCreated: number, message?: string}>}
+   */
+  async createTagsCollection() {
+    throw new Error('Method createTagsCollection() must be implemented');
+  }
+
+  /**
+   * Retrieves all tags from the tags collection
+   * @returns {Promise<Array>} Promise resolving to an array of tag objects with name and count
+   */
+  async getTags() {
+    throw new Error('Method getTags() must be implemented');
+  }
 }

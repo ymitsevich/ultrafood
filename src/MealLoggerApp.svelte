@@ -51,14 +51,21 @@
     // Recent foods special virtual category
     const RECENT_CATEGORY = "recent";
     let recentFoods = []; // Will store recent foods
-    const MAX_RECENT_ITEMS = 40; // Maximum number of recent items to display (doubled from 20 to 40)
     
-    // Set recent as default category
+    // Current category/tag state - now using tags from database
     let currentCategory = RECENT_CATEGORY;
+    let availableTags = []; // Will store tags from database
+    let isLoadingTags = false;
+    let tagLoadError = null;
+    
+    // Loading and error states
     let isLoading = true;
     let loadError = null;
     let usingLocalData = false;
-
+    
+    // Maximum number of recent items to display
+    const MAX_RECENT_ITEMS = 40;
+    
     // New category modal state
     let showAddCategoryModal = false;
     let newCategoryName = '';
@@ -138,6 +145,9 @@
             isLoading = true;
             loadError = null;
             
+            // Load tags from database first
+            await loadTags();
+            
             // Get food items from database with timeout
             const firestoreItems = await database.getFoodItems();
             
@@ -201,12 +211,39 @@
             window.removeEventListener('foodDataRefresh', handleFoodDataRefresh);
         };
     });
-    
-    // Handle food data refresh event
-    async function handleFoodDataRefresh() {
-        console.log('Refreshing food data after backdating...');
-        await loadFoodData();
-        updateRecentFoods();
+
+    // Load tags from database
+    async function loadTags() {
+        try {
+            isLoadingTags = true;
+            tagLoadError = null;
+            
+            console.log('Loading tags from database...');
+            const tags = await database.getTags();
+            
+            if (tags && tags.length > 0) {
+                availableTags = tags;
+                console.log(`Loaded ${tags.length} tags from database`);
+            } else {
+                console.log('No tags found in database');
+                availableTags = [];
+            }
+        } catch (error) {
+            console.error('Error loading tags from database:', error);
+            tagLoadError = 'Failed to load tags from database';
+            availableTags = [];
+        } finally {
+            isLoadingTags = false;
+        }
+    }
+
+    // Get food items for a specific tag
+    function getFoodItemsForTag(tagName) {
+        // Filter all food items to find those with the specified tag
+        const allFoodItems = Object.values(foodData).flat();
+        return allFoodItems.filter(item => 
+            item.tags && Array.isArray(item.tags) && item.tags.includes(tagName)
+        );
     }
     
     // Toggle menu
@@ -328,7 +365,6 @@
         // Refresh meal data
         loadSubmittedMeals(true); // Reset pagination to show the newest meal
     }
-    
     // Function to backup database data
     async function backupData() {
         if (!database.isAvailable()) {
@@ -805,6 +841,25 @@
             console.error('Error reloading food data:', error);
         }
     }
+
+    // Handle food data refresh events from backdating modal
+    async function handleFoodDataRefresh() {
+        console.log('Food data refresh event received, reloading data...');
+        
+        try {
+            // Reload food data
+            await loadFoodData();
+            
+            // Reload tags as well since they might have changed
+            await loadTags();
+            
+            // Show success notification
+            showNotification('Food data refreshed successfully!');
+        } catch (error) {
+            console.error('Error refreshing food data:', error);
+            showNotification('Failed to refresh food data', 'error');
+        }
+    }
 </script>
 
 <div class="meal-logger">
@@ -828,15 +883,38 @@
             <!-- Category separator -->
             <div class="category-separator"></div>
             
-            <!-- Show all regular categories with items -->
-            {#each Object.entries(foodData).filter(([cat, items]) => items.length > 0 && cat !== RECENT_CATEGORY) as [category, _]}
-                <button
-                    class="category-btn {currentCategory === category ? 'active' : ''}"
-                    on:click={() => currentCategory = category}
-                >
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                </button>
-            {/each}
+            <!-- Show tags from database -->
+            {#if isLoadingTags}
+                <div class="loading-tags">
+                    <span class="category-btn loading">{t('loading')}</span>
+                </div>
+            {:else if tagLoadError}
+                <div class="tags-error">
+                    <span class="category-btn error-tag">{t('errorLoadingTags')}</span>
+                </div>
+            {:else if availableTags.length > 0}
+                {#each availableTags as tag}
+                    <button
+                        class="category-btn {currentCategory === tag.name ? 'active' : ''}"
+                        on:click={() => currentCategory = tag.name}
+                        title="{tag.name} ({tag.count} items)"
+                    >
+                        {tag.name.charAt(0).toUpperCase() + tag.name.slice(1)}
+                    </button>
+                {/each}
+            {:else}
+                <!-- Fallback to old category system if no tags available -->
+                {#each Object.entries(foodData).filter(([cat, items]) => items.length > 0 && cat !== RECENT_CATEGORY) as [category, items]}
+                    <button
+                        class="category-btn {currentCategory === category ? 'active' : ''}"
+                        on:click={() => currentCategory = category}
+                        title="{category} ({items.length} items)"
+                    >
+                        {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </button>
+                {/each}
+            {/if}
+            
             <!-- Add Category Button -->
             <button
                 class="category-btn add-category-btn"
@@ -853,10 +931,13 @@
                 <p>{t('loading')}</p>
             </div>
         {:else}
-            <!-- Food Grid Component - Handle Recent Virtual Category Separately -->
+            <!-- Food Grid Component - Handle Recent Virtual Category and Tags -->
             <FoodGrid
                 category={currentCategory}
-                foodItems={currentCategory === RECENT_CATEGORY ? recentFoods : (foodData[currentCategory] || [])}
+                foodItems={currentCategory === RECENT_CATEGORY ? recentFoods : 
+                          (availableTags.some(tag => tag.name === currentCategory) ? 
+                           getFoodItemsForTag(currentCategory) : 
+                           (foodData[currentCategory] || []))}
                 onConfigClick={openAmountModal}
                 onAddNewFood={openAddFoodModal}
                 onEditFood={openEditFoodModal}
@@ -1196,6 +1277,24 @@
         background-color: #C26C51;
         color: white;
         border-color: #C26C51;
+    }
+
+    .tag-count {
+        font-size: 11px;
+        opacity: 0.8;
+        margin-left: 4px;
+        font-weight: normal;
+    }
+
+    .category-btn.loading, .category-btn.error-tag {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .category-btn.error-tag {
+        background-color: #ffebee;
+        color: #c62828;
+        border-color: #ffcdd2;
     }
 
     .add-category-btn {

@@ -334,4 +334,144 @@ export class InMemoryDatabaseService extends DatabaseService {
   isAvailable() {
     return true; // In-memory is always available
   }
+
+  /**
+   * @inheritdoc
+   */
+  async deleteCategoryFields() {
+    let foodItemsProcessed = 0;
+    let foodItemsUpdated = 0;
+    let mealsProcessed = 0;
+    let mealsUpdated = 0;
+    
+    // Process food items
+    foodItemsProcessed = this.foodItems.length;
+    
+    this.foodItems.forEach(item => {
+      if (item.hasOwnProperty('category')) {
+        delete item.category;
+        item.updatedAt = new Date().toISOString();
+        item.categoryDeletedAt = new Date().toISOString();
+        foodItemsUpdated++;
+      }
+    });
+    
+    // Process meals
+    mealsProcessed = this.meals.length;
+    
+    this.meals.forEach(meal => {
+      if (meal.items && Array.isArray(meal.items)) {
+        let mealUpdated = false;
+        
+        meal.items.forEach(item => {
+          if (item.hasOwnProperty('category')) {
+            delete item.category;
+            mealUpdated = true;
+          }
+        });
+        
+        if (mealUpdated) {
+          meal.updatedAt = new Date().toISOString();
+          meal.categoryDeletedAt = new Date().toISOString();
+          mealsUpdated++;
+        }
+      }
+    });
+    
+    console.log(`[InMemory] Category deletion completed: ${foodItemsUpdated}/${foodItemsProcessed} food items, ${mealsUpdated}/${mealsProcessed} meals updated`);
+    
+    return {
+      success: true,
+      foodItemsProcessed,
+      foodItemsUpdated,
+      mealsProcessed,
+      mealsUpdated
+    };
+  }
+
+  /**
+   * @inheritdoc
+   */
+  async createTagsCollection() {
+    try {
+      console.log('[InMemory] Starting tags collection creation...');
+      
+      // Extract and count all tags
+      const tagCounts = new Map();
+      let totalFoodItems = this.foodItems.length;
+      
+      this.foodItems.forEach(foodItem => {
+        if (foodItem.tags && Array.isArray(foodItem.tags)) {
+          foodItem.tags.forEach(tag => {
+            if (typeof tag === 'string' && tag.trim()) {
+              const normalizedTag = tag.trim().toLowerCase();
+              tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+            }
+          });
+        }
+      });
+      
+      // Create tags collection (in memory we'll just store it in a new array)
+      this.tags = [];
+      let tagsCreated = 0;
+      
+      for (const [tagName, count] of tagCounts.entries()) {
+        const tagDoc = {
+          id: tagName,
+          name: tagName,
+          count: count,
+          createdAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString()
+        };
+        
+        this.tags.push(tagDoc);
+        tagsCreated++;
+        
+        console.log(`[InMemory] Created tag: ${tagName} (count: ${count})`);
+      }
+      
+      console.log(`[InMemory] Tags collection creation completed: ${tagsCreated} unique tags from ${totalFoodItems} food items`);
+      
+      return {
+        success: true,
+        tagsCreated,
+        totalFoodItems
+      };
+    } catch (error) {
+      console.error('[InMemory] Error during tags collection creation:', error);
+      return {
+        success: false,
+        tagsCreated: 0,
+        message: `Tags collection creation failed: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  async getTags() {
+    // Initialize tags array if it doesn't exist
+    if (!this.tags) {
+      this.tags = [];
+    }
+
+    try {
+      console.log('[InMemory] Getting tags from tags collection...');
+      
+      // Return a copy of the tags array, sorted by count (descending) then by name (ascending)
+      const sortedTags = [...this.tags].sort((a, b) => {
+        if (b.count !== a.count) {
+          return b.count - a.count;
+        }
+        return a.name.localeCompare(b.name);
+      });
+      
+      console.log(`[InMemory] Retrieved ${sortedTags.length} tags from collection`);
+      return sortedTags;
+    } catch (error) {
+      console.error('[InMemory] Error getting tags:', error);
+      return [];
+    }
+  }
 }

@@ -36,6 +36,10 @@ export const translations = {
         // Food grid
         addNew: 'Add New',
         
+        // Tag system
+        errorLoadingTags: 'Error loading tags',
+        loading: 'Loading...',
+        
         // Basket sidebar
         emptyBasket: 'Your basket is empty',
         submitNow: 'Submit Now',
@@ -168,7 +172,13 @@ export const translations = {
         deleteCategoryFailed: 'Category deletion procedure failed',
         deleteCategoryFoodItems: 'Food items updated: {count}',
         deleteCategoryMeals: 'Meals updated: {count}',
-        deletionRunning: 'Deleting categories...'
+        deletionRunning: 'Deleting categories...',
+        
+        // Tags collection creation
+        createTagsCompleted: 'Tags collection created successfully!',
+        createTagsFailed: 'Tags collection creation failed',
+        createTagsCount: 'Tags created: {count}',
+        createTagsRunning: 'Creating tags collection...'
     },
     ru: {
         // Categories
@@ -177,6 +187,10 @@ export const translations = {
         
         // Food grid
         addNew: 'Добавить',
+        
+        // Tag system
+        errorLoadingTags: 'Ошибка загрузки тегов',
+        loading: 'Загрузка...',
         
         // Basket sidebar
         emptyBasket: 'Ваша корзина пуста',
@@ -310,7 +324,13 @@ export const translations = {
         deleteCategoryFailed: 'Ошибка процедуры удаления категории',
         deleteCategoryFoodItems: 'Обновлено продуктов: {count}',
         deleteCategoryMeals: 'Обновлено приемов пищи: {count}',
-        deletionRunning: 'Удаление категорий...'
+        deletionRunning: 'Удаление категорий...',
+        
+        // Tags collection creation
+        createTagsCompleted: 'Коллекция тегов создана успешно!',
+        createTagsFailed: 'Ошибка создания коллекции тегов',
+        createTagsCount: 'Создано тегов: {count}',
+        createTagsRunning: 'Создание коллекции тегов...'
     }
 };
 
