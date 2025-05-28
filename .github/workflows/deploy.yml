@@ -77,12 +77,18 @@ jobs:
         run: docker compose build
 
       - name: Start Docker services
-        run: NODE_ENV=test docker compose up -d
+        run: NODE_ENV=test docker compose up -d --wait
         env:
           NODE_ENV: test
 
       - name: Wait for services to be ready
         run: sleep 20
+
+      - name: Check Docker services status
+        run: docker compose ps
+
+      - name: Fetch frontend container logs (if needed)
+        run: docker logs $(docker compose ps -q frontend)
 
       - name: Build application in container
         run: docker compose exec -T frontend npm run build
