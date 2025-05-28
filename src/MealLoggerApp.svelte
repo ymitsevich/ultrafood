@@ -36,11 +36,11 @@
     let foodData = {}; // Will be populated with tag-based organization
     
     // Recent foods special virtual tag
-    const RECENT_CATEGORY = "recent";
+    const RECENT_TAG = "recent";
     let recentFoods = []; // Will store recent foods
     
     // Current tag state - using tags from database
-    let currentTag = RECENT_CATEGORY;
+    let currentTag = RECENT_TAG;
     let availableTags = []; // Will store tags from database
     let isLoadingTags = false;
     let tagLoadError = null;
@@ -53,7 +53,7 @@
     // Maximum number of recent items to display
     const MAX_RECENT_ITEMS = 40;
     
-    // Add tag modal state (replacing category modal)
+    // Add tag modal state
     let showAddTagModal = false;
     let newTagName = '';
     
@@ -436,27 +436,39 @@
         showEditFoodModal = true;
     }
     
-    // Handle add new tag (replaces legacy category system)
-    function addNewTag() {
-        if (newTagName.trim()) {
-            // Convert to lowercase and replace spaces with underscores for consistency
-            const tagKey = newTagName.trim().toLowerCase().replace(/\s+/g, '_');
+    // Handle add new tag
+    async function addNewTag() {
+        if (!newTagName.trim()) {
+            showNotification(t('tagNameRequired'), 'error');
+            return;
+        }
+
+        try {
+            isLoadingTags = true;
             
-            // Check if tag already exists in foodData
-            if (!foodData[tagKey]) {
-                // Create the new tag group with an empty array
-                foodData[tagKey] = [];
-                
-                // Trigger reactivity by creating a new reference
-                foodData = { ...foodData };
-                
-                // Switch to the new tag
-                currentTag = tagKey;
-            }
+            // Create a minimal food item to establish the tag
+            const tagFood = {
+                name: `${newTagName} Tag Food`,
+                tags: [newTagName.toLowerCase().trim()],
+                emoji: '🏷️'
+            };
+
+            await database.addFood(tagFood);
             
-            // Reset and close modal
-            newTagName = '';
+            // Refresh tags and switch to the new tag
+            await loadTags();
+            currentTag = newTagName.toLowerCase().trim();
+            
+            // Reset modal state
             showAddTagModal = false;
+            newTagName = '';
+            
+            showNotification(t('tagAdded'), 'success');
+        } catch (error) {
+            console.error('Error adding tag:', error);
+            showNotification(t('errorAddingTag'), 'error');
+        } finally {
+            isLoadingTags = false;
         }
     }
     
@@ -613,9 +625,9 @@
         }
         
         // If current tag was deleted, switch to Recent or first available tag
-        if (!foodData[currentTag] && currentTag !== RECENT_CATEGORY) {
+        if (!foodData[currentTag] && currentTag !== RECENT_TAG) {
             const availableTagNames = Object.keys(foodData);
-            currentTag = availableTagNames.length > 0 ? availableTagNames[0] : RECENT_CATEGORY;
+            currentTag = availableTagNames.length > 0 ? availableTagNames[0] : RECENT_TAG;
         }
 
         // Update foodData to trigger reactivity if changes were made
@@ -641,20 +653,20 @@
     }
     
     function handleDeleteFood(foodId) {
-        // Find the food in all tag categories and remove it
+        // Find the food in all tag groups and remove it
         for (const tag of Object.keys(foodData)) {
             const indexToRemove = foodData[tag].findIndex(item => item.id === foodId);
             if (indexToRemove >= 0) {
                 foodData[tag].splice(indexToRemove, 1);
                 
-                // If the tag category is now empty, remove it
+                // If the tag group is now empty, remove it
                 if (foodData[tag].length === 0) {
                     delete foodData[tag];
                     
                     // If we removed the current tag, switch to another one
                     if (tag === currentTag) {
                         const remainingTags = Object.keys(foodData);
-                        currentTag = remainingTags.length > 0 ? remainingTags[0] : RECENT_CATEGORY;
+                        currentTag = remainingTags.length > 0 ? remainingTags[0] : RECENT_TAG;
                     }
                 }
                 
@@ -700,32 +712,32 @@
     />
 
     <div class="main-content">
-        <!-- Categories -->
-        <div class="categories">
-            <!-- Always show Recent category first -->
+        <!-- Tags -->
+        <div class="tags">
+            <!-- Always show Recent tag first -->
             <button
-                class="category-btn {currentTag === RECENT_CATEGORY ? 'active' : ''}"
-                on:click={() => currentTag = RECENT_CATEGORY}
+                class="tag-btn {currentTag === RECENT_TAG ? 'active' : ''}"
+                on:click={() => currentTag = RECENT_TAG}
             >
                 {t('recent')}
             </button>
             
-            <!-- Category separator -->
-            <div class="category-separator"></div>
+            <!-- Tag separator -->
+            <div class="tag-separator"></div>
             
             <!-- Show tags from database -->
             {#if isLoadingTags}
                 <div class="loading-tags">
-                    <span class="category-btn loading">{t('loading')}</span>
+                    <span class="tag-btn loading">{t('loading')}</span>
                 </div>
             {:else if tagLoadError}
                 <div class="tags-error">
-                    <span class="category-btn error-tag">{t('errorLoadingTags')}</span>
+                    <span class="tag-btn error-tag">{t('errorLoadingTags')}</span>
                 </div>
             {:else if availableTags.length > 0}
                 {#each availableTags as tag}
                     <button
-                        class="category-btn {currentTag === tag.name ? 'active' : ''}"
+                        class="tag-btn {currentTag === tag.name ? 'active' : ''}"
                         on:click={() => currentTag = tag.name}
                         title="{tag.name} ({tag.count} items)"
                     >
@@ -739,9 +751,9 @@
                 </div>
             {/if}
             
-            <!-- Add Tag Button (replaces Add Category) -->
+            <!-- Add Tag Button -->
             <button
-                class="category-btn add-category-btn"
+                class="tag-btn add-tag-btn"
                 on:click={() => showAddTagModal = true}
                 title={t('addTag')}
             >
@@ -758,14 +770,14 @@
             <!-- Food Grid Component - Handle Recent Virtual Tag and Tags -->
             <FoodGrid
                 tag={currentTag}
-                foodItems={currentTag === RECENT_CATEGORY ? recentFoods : 
+                foodItems={currentTag === RECENT_TAG ? recentFoods : 
                           (availableTags.some(tag => tag.name === currentTag) ? 
                            getFoodItemsForTag(currentTag) : 
                            (foodData[currentTag] || []))}
                 onConfigClick={openAmountModal}
                 onAddNewFood={openAddFoodModal}
                 onEditFood={openEditFoodModal}
-                isVirtualTag={currentTag === RECENT_CATEGORY}
+                isVirtualTag={currentTag === RECENT_TAG}
             />
 
             <!-- Show status message if error occurred -->
@@ -806,7 +818,7 @@
     />
     <AddFoodModal
         bind:showModal={showAddFoodModal}
-        currentTag={currentTag === RECENT_CATEGORY ? Object.keys(foodData)[0] || '' : currentTag}
+        currentTag={currentTag === RECENT_TAG ? Object.keys(foodData)[0] || '' : currentTag}
         onAddFood={handleAddNewFood}
         availableTags={availableTags.map(tag => tag.name)}
     />
@@ -903,10 +915,10 @@
         </div>
     {/if}
 
-    <!-- Add Tag Modal (replaces Add Category Modal) -->
+    <!-- Add Tag Modal -->
     {#if showAddTagModal}
         <div class="modal">
-            <div class="modal-content add-category-modal">
+            <div class="modal-content add-tag-modal">
                 <span class="close-modal" on:click={() => showAddTagModal = false}>&times;</span>
                 <h2>{t('addTag')}</h2>
 
@@ -1068,8 +1080,8 @@
         transition: all 0.3s;
     }
 
-    /* Categories */
-    .categories {
+    /* Tags */
+    .tags {
         display: flex;
         flex-wrap: nowrap;
         overflow-x: auto;
@@ -1080,7 +1092,7 @@
         gap: 2px;
     }
 
-    .category-btn {
+    .tag-btn {
         padding: 5px 10px;
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
@@ -1092,11 +1104,11 @@
         margin: 0;
     }
 
-    .category-btn:hover {
+    .tag-btn:hover {
         background-color: #f5f5f5;
     }
 
-    .category-btn.active {
+    .tag-btn.active {
         background-color: #C26C51;
         color: white;
         border-color: #C26C51;
@@ -1109,26 +1121,26 @@
         font-weight: normal;
     }
 
-    .category-btn.loading, .category-btn.error-tag {
+    .tag-btn.loading, .tag-btn.error-tag {
         opacity: 0.6;
         cursor: not-allowed;
     }
 
-    .category-btn.error-tag {
+    .tag-btn.error-tag {
         background-color: #ffebee;
         color: #c62828;
         border-color: #ffcdd2;
     }
 
-    .add-category-btn {
+    .add-tag-btn {
         font-weight: bold;
         font-size: 16px;
         padding: 8px 14px;
         color: #7E7E7E;
     }
 
-    /* New styles for category separator */
-    .category-separator {
+    /* New styles for tag separator */
+    .tag-separator {
         width: 2px;
         background-color: #e0e0e0;
         height: 24px;
@@ -1208,8 +1220,8 @@
         color: #333;
     }
 
-    /* Add Category Modal */
-    .add-category-modal {
+    /* Add Tag Modal */
+    .add-tag-modal {
         width: 400px;
         max-width: 90vw;
     }

@@ -1,193 +1,146 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 
-test.describe('Amount Modal functionality', () => {
-  test('should be able to interact with amount modal', async ({ page }) => {
-    // Go to the application
-    await page.goto('/');
+test.describe('Amount Modal', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/ultrafood/');
     
-    // Wait for the page to load
-    await page.waitForSelector('.food-grid', { timeout: 3000 }); // Reduced from 10000
-    
-    // Close any initial modals like language selector
-    try {
-      const closeButtons = await page.locator('.modal .close-modal').all();
-      for (const button of closeButtons) {
-        if (await button.isVisible()) {
-          await button.click();
-          console.log('Closed an initial modal');
-          await page.waitForTimeout(200); // Reduced from 500
-        }
-      }
-    } catch (e) {
-      console.log('No initial modals to close');
-    }
-    
-    // Check if amount selection can be triggered
-    // First, find all food items
-    const foodItems = await page.locator('.food-item:not(.add-new-food)').all();
-    console.log(`Found ${foodItems.length} food items`);
-    
-    // Try different food items to see if any can trigger the amount modal
-    let amountModalFound = false;
-    
-    for (let i = 0; i < Math.min(foodItems.length, 3); i++) {
-      const foodItem = foodItems[i];
-      const foodName = await foodItem.locator('.food-name').textContent();
-      console.log(`Trying food item ${i+1}: ${foodName}`);
-      
-      // Clear any existing basket items
-      const basketItems = await page.locator('.basket-item .remove-icon').all();
-      for (const item of basketItems) {
-        if (await item.isVisible()) {
-          await item.click();
-          await page.waitForTimeout(200);
-        }
-      }
-      
-      // Click the food item
-      await foodItem.click();
-      console.log(`Clicked on ${foodName}`);
-      
-      // Wait a moment
-      await page.waitForTimeout(200); // Reduced from 1000
-      
-      // Look for the amount modal or input
-      const amountButtons = await page.locator('.amount-btn').all();
-      const customAmountInput = await page.locator('.custom-amount input').count();
-      
-      console.log(`Found ${amountButtons.length} amount buttons and ${customAmountInput} custom amount inputs`);
-      
-      if (amountButtons.length > 0 || customAmountInput > 0) {
-        console.log(`Success! Amount modal found when clicking on ${foodName}`);
-        
-        // Try to take a screenshot of the modal
-        await page.screenshot({ path: `test-results/amount-modal-${i}.png` });
-        
-        // Test the custom amount input if available
-        if (customAmountInput > 0) {
-          await page.locator('.custom-amount input').fill('42g');
-          await page.locator('.custom-amount-btn').click();
-          console.log('Added custom amount: 42g');
-          
-          // Check if item was added with custom amount
-          await page.waitForTimeout(500); // Reduced from 1000
-          const basketItemAmount = await page.locator('.basket-item-amount').first().textContent();
-          console.log(`Resulting basket item amount: ${basketItemAmount}`);
-          
-          if (basketItemAmount && basketItemAmount.includes('42g')) {
-            console.log('Success! Custom amount was applied correctly');
-          }
-        } else if (amountButtons.length > 0) {
-          // If only amount buttons are available, click one
-          await amountButtons[0].click();
-          console.log('Clicked an amount button');
-          
-          // Check if item was added
-          await page.waitForTimeout(500); // Reduced from 1000
-          const basketItem = await page.locator('.basket-item').isVisible();
-          console.log(`Basket item visible after clicking amount button: ${basketItem}`);
-        }
-        
-        amountModalFound = true;
-        break;
-      }
-      
-      // If no modal found for this item, remove it from basket and try next one
-      const newBasketItems = await page.locator('.basket-item .remove-icon').all();
-      for (const item of newBasketItems) {
-        if (await item.isVisible()) {
-          await item.click();
-          await page.waitForTimeout(200);
-        }
+    // Close any open modals first (like language modal)
+    const modals = await page.locator('.modal:visible').all();
+    for (const modal of modals) {
+      const closeButton = modal.locator('.close-modal');
+      if (await closeButton.isVisible()) {
+        await closeButton.click();
+        await page.waitForTimeout(200);
       }
     }
+  });
+
+  test('Should interact with amount modal', async ({ page }) => {
+    console.log('Testing amount modal interactions');
     
-    // Check app settings or configuration to see if amount modal is disabled
-    const appSettings = await page.evaluate(() => {
-      // Try to access any global settings that might control modal behavior
-      const settings = {
-        foundSettings: false
-      };
-      
-      // Look for any relevant variables in window scope
-      if (window.localStorage) {
-        settings.foundSettings = true;
-        settings.localStorage = {};
-        
-        // Check localStorage for any relevant settings
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key) {
-            try {
-              const value = localStorage.getItem(key);
-              settings.localStorage[key] = value;
-            } catch (e) {
-              settings.localStorage[key] = "Error reading value";
-            }
-          }
-        }
-      }
-      
-      return settings;
-    });
-    
-    console.log('App settings/configuration:', appSettings);
-    
-    // Test conclusion
-    if (amountModalFound) {
-      console.log('Test successful: Amount modal was found and tested');
-    } else {
-      console.log('Amount modal could not be triggered - may be disabled or using different flow');
-      // Take a screenshot of current state
-      await page.screenshot({ path: 'test-results/no-amount-modal.png' });
-      
-      // The test should still pass if items can be added to basket, even without the modal
-      const canAddToBasket = await page.evaluate(() => {
-        const firstFoodItem = document.querySelector('.food-item:not(.add-new-food)');
-        if (firstFoodItem) {
-          firstFoodItem.click();
-          return true;
-        }
-        return false;
-      });
-      
+    // Switch to a tag with food items
+    const tagButtons = page.locator('button.tag-btn').filter({ hasText: /^(Fruits|Meat|Grains|Vegetables)$/ });
+    if (await tagButtons.count() > 0) {
+      await tagButtons.first().click();
       await page.waitForTimeout(1000);
-      const basketHasItems = await page.locator('.basket-item').count() > 0;
+    }
+    
+    // Find a food item to click
+    const foodItems = page.locator('.food-item:not(.add-new-food) .food-btn');
+    if (await foodItems.count() > 0) {
+      console.log('Found food items, clicking first one');
       
-      console.log(`Can add to basket: ${canAddToBasket}, Basket has items: ${basketHasItems}`);
+      const firstFood = foodItems.first();
+      await firstFood.click();
       
-      // Instead of asserting that basketHasItems is true, we'll check if a food modal appears
-      // or if items are actually added to the basket
-      if (!basketHasItems) {
-        // Check if any modals are visible after clicking
-        const visibleModals = await page.locator('.modal').filter({ visible: true }).count();
-        console.log(`Found ${visibleModals} visible modals after clicking`);
+      // Wait for amount modal to appear (use more specific selector)
+      const amountModal = page.locator('.modal:visible').first();
+      await expect(amountModal).toBeVisible({ timeout: 3000 });
+      console.log('✓ Amount modal opened');
+      
+      // Check if modal content is visible
+      const modalContent = amountModal.locator('.modal-content');
+      await expect(modalContent).toBeVisible();
+      
+      // Test preset amount buttons
+      const amountButtons = amountModal.locator('.amount-btn');
+      const buttonCount = await amountButtons.count();
+      console.log(`Found ${buttonCount} preset amount buttons`);
+      
+      if (buttonCount > 0) {
+        // Test clicking a preset amount button
+        const firstAmountBtn = amountButtons.first();
+        const buttonText = await firstAmountBtn.textContent();
+        console.log(`Testing preset amount button: ${buttonText}`);
         
-        // Check modal visibility and type
-        if (visibleModals > 0) {
-          console.log("Modal is displayed instead of directly adding to basket - this is expected behavior");
+        await firstAmountBtn.click();
+        console.log('✓ Preset amount button clicked');
+        
+        // Wait for modal to close
+        await page.waitForSelector('.modal:visible', { state: 'hidden', timeout: 3000 });
+        
+        // Re-open modal for custom amount test
+        await firstFood.click();
+        const reopenedModal = page.locator('.modal:visible').first();
+        await expect(reopenedModal).toBeVisible({ timeout: 3000 });
+      }
+      
+      // Test custom amount input (use the current modal)
+      const currentModal = page.locator('.modal:visible').first();
+      const customAmountInput = currentModal.locator('.custom-amount input');
+      if (await customAmountInput.isVisible()) {
+        console.log('Testing custom amount input');
+        
+        await customAmountInput.fill('125g');
+        console.log('✓ Custom amount entered');
+        
+        // Click the custom amount button
+        const customAmountBtn = currentModal.locator('.custom-amount-btn');
+        await customAmountBtn.click();
+        console.log('✓ Custom amount button clicked');
+        
+        // Wait for modal to close
+        await page.waitForSelector('.modal:visible', { state: 'hidden', timeout: 3000 });
+      }
+      
+      // Test modal close button
+      await firstFood.click();
+      const finalModal = page.locator('.modal:visible').first();
+      await expect(finalModal).toBeVisible({ timeout: 3000 });
+      
+      const closeButton = finalModal.locator('.close-modal');
+      if (await closeButton.isVisible()) {
+        await closeButton.click();
+        console.log('✓ Modal closed via close button');
+        
+        // Wait for modal to be hidden
+        await page.waitForSelector('.modal:visible', { state: 'hidden', timeout: 3000 });
+      }
+      
+    } else {
+      console.log('No food items found, creating a test food first');
+      
+      // Create a test food item
+      const addFoodButton = page.locator('.add-new-food .add-food-btn');
+      if (await addFoodButton.isVisible()) {
+        await addFoodButton.click();
+        await page.waitForTimeout(500);
+        
+        await page.waitForSelector('.modal:visible', { timeout: 3000 });
+        
+        await page.fill('input[id="food-name"]', 'Test Amount Modal Food');
+        
+        // Add tag
+        const tagInput = page.locator('.inline-tag-input input');
+        await tagInput.fill('test');
+        await tagInput.press('Enter');
+        
+        // Submit
+        const submitButton = page.locator('button:has-text("Add Food")');
+        await submitButton.click();
+        
+        await page.waitForSelector('.modal', { state: 'hidden', timeout: 5000 });
+        await page.waitForTimeout(1000);
+        
+        // Switch to test tag and test the created food
+        const testTag = page.locator('button.tag-btn:has-text("test")');
+        if (await testTag.isVisible()) {
+          await testTag.click();
+          await page.waitForTimeout(500);
           
-          // Test passes if a modal is shown when clicking on a food item
-          expect(visibleModals).toBeGreaterThan(0);
-        } else {
-          // If no modal and no item added, we should check if there's a way to add items
-          // This could involve looking for other UI elements
+          const newFood = page.locator('.food-item:not(.add-new-food) .food-btn').first();
+          await newFood.click();
           
-          // For now, we'll mark the test as inconclusive by recording information
-          console.log("Neither a modal was shown nor was an item added to the basket");
-          console.log("This may be expected behavior depending on app configuration");
+          await page.waitForSelector('.modal:visible', { timeout: 3000 });
           
-          // Take screenshot for debugging
-          await page.screenshot({ path: 'test-results/no-modal-no-item.png' });
-          
-          // Instead of failing, we'll pass but log the behavior
-          // This allows the test to pass without changing application logic
-          expect(true).toBe(true);
+          // Test the amount modal with created food
+          const amountBtn = page.locator('.amount-btn').first();
+          if (await amountBtn.isVisible()) {
+            await amountBtn.click();
+            console.log('✓ Amount modal tested with created food');
+          }
         }
-      } else {
-        // If items were added to the basket, that's fine too
-        expect(basketHasItems).toBe(true);
       }
     }
   });

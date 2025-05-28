@@ -9,7 +9,7 @@ export const DEFAULT_SEED_DATA = {
     {
       id: 'apple-test-123456',
       name: 'Apple',
-      tags: ['fruits'], // Changed from category to tags array
+      tags: ['fruits'],
       emoji: '🍎',
       calories: 52,
       image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/apple.jpg',
@@ -18,7 +18,7 @@ export const DEFAULT_SEED_DATA = {
     {
       id: 'chicken-breast-test-123457',
       name: 'Chicken Breast',
-      tags: ['meat', 'protein'], // Multiple tags example
+      tags: ['meat', 'protein'],
       emoji: '🍗',
       calories: 165,
       image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/chicken.jpg',
@@ -27,7 +27,7 @@ export const DEFAULT_SEED_DATA = {
     {
       id: 'brown-rice-test-123458',
       name: 'Brown Rice',
-      tags: ['grains', 'carbs'], // Multiple tags example
+      tags: ['grains', 'carbs'],
       emoji: '🍚',
       calories: 112,
       image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/rice.jpg',
@@ -43,18 +43,16 @@ export const DEFAULT_SEED_DATA = {
         {
           id: 'apple-test-123456',
           name: 'Apple',
+          tags: ['fruits'],
           calories: 52,
-          category: 'fruits',
-          defaultAmount: '100g',
           image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/apple.jpg',
           amount: '1'
         },
         {
           id: 'chicken-breast-test-123457',
           name: 'Chicken Breast',
+          tags: ['meat', 'protein'],
           calories: 165,
-          category: 'meat',
-          defaultAmount: '100g',
           image: 'https://res.cloudinary.com/do4lznbge/image/upload/v1746861886/food-images/chicken.jpg',
           amount: '100g'
         }
@@ -73,6 +71,7 @@ export class InMemoryDatabaseService extends DatabaseService {
     super();
     this.foodItems = [];
     this.meals = [];
+    this.tags = []; // Initialize tags array
     
     // Auto-seed in test environment
     if (process.env.NODE_ENV === 'test') {
@@ -88,10 +87,11 @@ export class InMemoryDatabaseService extends DatabaseService {
    * @param {boolean} clearExisting - Whether to clear existing data before seeding
    * @returns {Object} Summary of seeded data
    */
-  seed(seedData = DEFAULT_SEED_DATA, clearExisting = true) {
+  async seed(seedData = DEFAULT_SEED_DATA, clearExisting = true) {
     if (clearExisting) {
       this.foodItems = [];
       this.meals = [];
+      this.tags = [];
     }
     
     if (seedData.foodItems && Array.isArray(seedData.foodItems)) {
@@ -102,15 +102,21 @@ export class InMemoryDatabaseService extends DatabaseService {
       this.meals.push(...JSON.parse(JSON.stringify(seedData.meals)));
     }
     
-    console.log(`[InMemoryDatabaseService] Seeded with ${this.foodItems.length} food items and ${this.meals.length} meals`);
+    // Auto-update tag counts after seeding food items
+    if (this.foodItems.length > 0) {
+      await this.updateTagCounts();
+    }
+    
+    console.log(`[InMemoryDatabaseService] Seeded with ${this.foodItems.length} food items, ${this.meals.length} meals, and ${this.tags.length} tags`);
     
     return {
       foodItemsCount: this.foodItems.length,
       mealsCount: this.meals.length,
+      tagsCount: this.tags.length,
       timestamp: new Date().toISOString()
     };
   }
-  
+
   /**
    * Clear all data from the database
    * @returns {Object} Summary of cleared data
@@ -119,11 +125,13 @@ export class InMemoryDatabaseService extends DatabaseService {
     const summary = {
       foodItemsCount: this.foodItems.length,
       mealsCount: this.meals.length,
+      tagsCount: this.tags.length,
       timestamp: new Date().toISOString()
     };
     
     this.foodItems = [];
     this.meals = [];
+    this.tags = [];
     
     console.log('[InMemoryDatabaseService] All data cleared');
     return summary;
@@ -336,119 +344,8 @@ export class InMemoryDatabaseService extends DatabaseService {
   }
 
   /**
-   * @inheritdoc
-   */
-  async deleteCategoryFields() {
-    let foodItemsProcessed = 0;
-    let foodItemsUpdated = 0;
-    let mealsProcessed = 0;
-    let mealsUpdated = 0;
-    
-    // Process food items
-    foodItemsProcessed = this.foodItems.length;
-    
-    this.foodItems.forEach(item => {
-      if (item.hasOwnProperty('category')) {
-        delete item.category;
-        item.updatedAt = new Date().toISOString();
-        item.categoryDeletedAt = new Date().toISOString();
-        foodItemsUpdated++;
-      }
-    });
-    
-    // Process meals
-    mealsProcessed = this.meals.length;
-    
-    this.meals.forEach(meal => {
-      if (meal.items && Array.isArray(meal.items)) {
-        let mealUpdated = false;
-        
-        meal.items.forEach(item => {
-          if (item.hasOwnProperty('category')) {
-            delete item.category;
-            mealUpdated = true;
-          }
-        });
-        
-        if (mealUpdated) {
-          meal.updatedAt = new Date().toISOString();
-          meal.categoryDeletedAt = new Date().toISOString();
-          mealsUpdated++;
-        }
-      }
-    });
-    
-    console.log(`[InMemory] Category deletion completed: ${foodItemsUpdated}/${foodItemsProcessed} food items, ${mealsUpdated}/${mealsProcessed} meals updated`);
-    
-    return {
-      success: true,
-      foodItemsProcessed,
-      foodItemsUpdated,
-      mealsProcessed,
-      mealsUpdated
-    };
-  }
-
-  /**
-   * @inheritdoc
-   */
-  async createTagsCollection() {
-    try {
-      console.log('[InMemory] Starting tags collection creation...');
-      
-      // Extract and count all tags
-      const tagCounts = new Map();
-      let totalFoodItems = this.foodItems.length;
-      
-      this.foodItems.forEach(foodItem => {
-        if (foodItem.tags && Array.isArray(foodItem.tags)) {
-          foodItem.tags.forEach(tag => {
-            if (typeof tag === 'string' && tag.trim()) {
-              const normalizedTag = tag.trim().toLowerCase();
-              tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
-            }
-          });
-        }
-      });
-      
-      // Create tags collection (in memory we'll just store it in a new array)
-      this.tags = [];
-      let tagsCreated = 0;
-      
-      for (const [tagName, count] of tagCounts.entries()) {
-        const tagDoc = {
-          id: tagName,
-          name: tagName,
-          count: count,
-          createdAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString()
-        };
-        
-        this.tags.push(tagDoc);
-        tagsCreated++;
-        
-        console.log(`[InMemory] Created tag: ${tagName} (count: ${count})`);
-      }
-      
-      console.log(`[InMemory] Tags collection creation completed: ${tagsCreated} unique tags from ${totalFoodItems} food items`);
-      
-      return {
-        success: true,
-        tagsCreated,
-        totalFoodItems
-      };
-    } catch (error) {
-      console.error('[InMemory] Error during tags collection creation:', error);
-      return {
-        success: false,
-        tagsCreated: 0,
-        message: `Tags collection creation failed: ${error.message}`
-      };
-    }
-  }
-
-  /**
-   * @inheritdoc
+   * Retrieves all tags from the tags collection
+   * @returns {Promise<Array>} Promise resolving to an array of tag objects with name and count
    */
   async getTags() {
     // Initialize tags array if it doesn't exist
@@ -472,6 +369,80 @@ export class InMemoryDatabaseService extends DatabaseService {
     } catch (error) {
       console.error('[InMemory] Error getting tags:', error);
       return [];
+    }
+  }
+
+  /**
+   * Updates tag counts in the tags collection based on current food items
+   * @returns {Promise<{success: boolean, tagsUpdated: number, message?: string}>}
+   */
+  async updateTagCounts() {
+    try {
+      console.log('[InMemory] Starting tag count update...');
+      
+      // Extract and count all tags
+      const tagCounts = new Map();
+      let totalFoodItems = this.foodItems.length;
+      
+      this.foodItems.forEach(foodItem => {
+        if (foodItem.tags && Array.isArray(foodItem.tags)) {
+          foodItem.tags.forEach(tag => {
+            if (typeof tag === 'string' && tag.trim()) {
+              const normalizedTag = tag.trim().toLowerCase();
+              tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+            }
+          });
+        }
+      });
+      
+      // Initialize tags array if it doesn't exist
+      if (!this.tags) {
+        this.tags = [];
+      }
+      
+      // Update or create tags
+      let tagsUpdated = 0;
+      
+      for (const [tagName, count] of tagCounts.entries()) {
+        const existingTagIndex = this.tags.findIndex(tag => tag.name === tagName);
+        
+        const tagDoc = {
+          id: tagName,
+          name: tagName,
+          count: count,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        if (existingTagIndex >= 0) {
+          // Update existing tag
+          this.tags[existingTagIndex] = {
+            ...this.tags[existingTagIndex],
+            ...tagDoc
+          };
+        } else {
+          // Create new tag
+          tagDoc.createdAt = new Date().toISOString();
+          this.tags.push(tagDoc);
+        }
+        
+        tagsUpdated++;
+        console.log(`[InMemory] Updated tag: ${tagName} (count: ${count})`);
+      }
+      
+      console.log(`[InMemory] Tag count update completed: ${tagsUpdated} tags updated from ${totalFoodItems} food items`);
+      
+      return {
+        success: true,
+        tagsUpdated,
+        totalFoodItems
+      };
+    } catch (error) {
+      console.error('[InMemory] Error during tag count update:', error);
+      return {
+        success: false,
+        tagsUpdated: 0,
+        message: `Tag count update failed: ${error.message}`
+      };
     }
   }
 }

@@ -82,6 +82,6 @@ If you want to deploy manually:
 ## Features
 
 - Mobile-friendly design with large UI elements
-- Food tracking with customizable categories
+- Food tracking with tag-based organization
 - Firebase integration for data storage
 - GitHub Pages hosting

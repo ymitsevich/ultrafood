@@ -29,9 +29,9 @@ const { subscribe, set, update } = writable(getBrowserLanguage());
 // Dictionary of translations
 export const translations = {
     en: {
-        // Categories
+        // Tags (updated from categories)
         recent: 'Recent',
-        addCategory: 'Add Category',
+        addTag: 'Add Tag',
         
         // Food grid
         addNew: 'Add New',
@@ -56,10 +56,8 @@ export const translations = {
         // Add food modal
         addFood: 'Add Food Item',
         foodName: 'Food Name',
-        category: 'Category',
-        tags: 'Tags', // New: for tags feature
-        addNewTag: 'Add new tag...', // New: for tags feature
-        selectCategory: 'Select Category',
+        tags: 'Tags',
+        addNewTag: 'Add new tag...',
         image: 'Image',
         uploadImage: 'Upload Image',
         searchImage: 'Search Image',
@@ -103,9 +101,9 @@ export const translations = {
         loading: 'Loading...',
         noMeals: 'You haven\'t logged any meals yet. Add items to your basket and submit them to log a meal.',
         
-        // Categories modal
-        categoryName: 'Category Name',
-        enterCategoryName: 'Enter category name',
+        // Tag system modal
+        tagName: 'Tag Name',
+        enterTagName: 'Enter tag name',
         
         // Language modal
         languageSettings: 'Language Settings',
@@ -153,13 +151,13 @@ export const translations = {
         menu: 'Menu',
         
         // Backdating procedure
-        backdateProcedure: 'Backdate Categories',
+        backdateProcedure: 'Backdate Tags',
         backdateRunning: 'Running backdating procedure...',
         backdateCompleted: 'Backdating completed successfully!',
         backdateFailed: 'Backdating procedure failed',
         backdateItemsProcessed: 'Items processed: {count}',
         backdateItemsUpdated: 'Items updated: {count}',
-        backdateConfirm: 'This will move category values to tags for all food items. Continue?',
+        backdateConfirm: 'This will move tag values for all food items. Continue?',
         
         // Meal backdating
         backdateMealsCompleted: 'Meal backdating completed successfully!',
@@ -167,12 +165,11 @@ export const translations = {
         backdateMealsProcessed: 'Meals processed: {count}',
         backdateMealsUpdated: 'Meals updated: {count}',
         
-        // Category deletion
-        deleteCategoryCompleted: 'Category deletion completed successfully!',
-        deleteCategoryFailed: 'Category deletion procedure failed',
-        deleteCategoryFoodItems: 'Food items updated: {count}',
-        deleteCategoryMeals: 'Meals updated: {count}',
-        deletionRunning: 'Deleting categories...',
+        // Tag deletion
+        deleteTagCompleted: 'Tag deletion completed successfully!',
+        deleteTagFailed: 'Tag deletion procedure failed',
+        deleteTagFoodItems: 'Food items updated: {count}',
+        deleteTagMeals: 'Meals updated: {count}',
         
         // Tags collection creation
         createTagsCompleted: 'Tags collection created successfully!',
@@ -181,9 +178,9 @@ export const translations = {
         createTagsRunning: 'Creating tags collection...'
     },
     ru: {
-        // Categories
+        // Tags (updated from categories) 
         recent: 'Недавнее',
-        addCategory: 'Добавить категорию',
+        addTag: 'Добавить тег',
         
         // Food grid
         addNew: 'Добавить',
@@ -208,10 +205,8 @@ export const translations = {
         // Add food modal
         addFood: 'Добавить продукт',
         foodName: 'Название продукта',
-        category: 'Категория',
-        tags: 'Теги', // New: for tags feature
-        addNewTag: 'Добавить новый тег...', // New: for tags feature
-        selectCategory: 'Выберите категорию',
+        tags: 'Теги',
+        addNewTag: 'Добавить новый тег...',
         image: 'Изображение',
         uploadImage: 'Загрузить изображение',
         searchImage: 'Поиск изображения',
@@ -255,9 +250,9 @@ export const translations = {
         loading: 'Загрузка...',
         noMeals: 'У вас еще нет записанных приемов пищи. Добавьте продукты в корзину и отправьте их, чтобы записать прием пищи.',
         
-        // Categories modal
-        categoryName: 'Название категории',
-        enterCategoryName: 'Введите название категории',
+        // Tag system modal
+        tagName: 'Название тега',
+        enterTagName: 'Введите название тега',
         
         // Language modal
         languageSettings: 'Настройки языка',
@@ -305,13 +300,13 @@ export const translations = {
         menu: 'Меню',
         
         // Backdating procedure
-        backdateProcedure: 'Обновить категории',
+        backdateProcedure: 'Обновить теги',
         backdateRunning: 'Выполняется процедура обновления...',
         backdateCompleted: 'Обновление успешно завершено!',
         backdateFailed: 'Ошибка процедуры обновления',
         backdateItemsProcessed: 'Обработано элементов: {count}',
         backdateItemsUpdated: 'Обновлено элементов: {count}',
-        backdateConfirm: 'Это перенесет значения категорий в теги для всех продуктов. Продолжить?',
+        backdateConfirm: 'Это перенесет значения тегов для всех продуктов. Продолжить?',
         
         // Meal backdating
         backdateMealsCompleted: 'Обновление приемов пищи успешно завершено!',
@@ -319,12 +314,11 @@ export const translations = {
         backdateMealsProcessed: 'Обработано приемов пищи: {count}',
         backdateMealsUpdated: 'Обновлено приемов пищи: {count}',
         
-        // Category deletion
-        deleteCategoryCompleted: 'Удаление категории завершено успешно!',
-        deleteCategoryFailed: 'Ошибка процедуры удаления категории',
-        deleteCategoryFoodItems: 'Обновлено продуктов: {count}',
-        deleteCategoryMeals: 'Обновлено приемов пищи: {count}',
-        deletionRunning: 'Удаление категорий...',
+        // Tag deletion
+        deleteTagCompleted: 'Удаление тега завершено успешно!',
+        deleteTagFailed: 'Ошибка процедуры удаления тега',
+        deleteTagFoodItems: 'Обновлено продуктов: {count}',
+        deleteTagMeals: 'Обновлено приемов пищи: {count}',
         
         // Tags collection creation
         createTagsCompleted: 'Коллекция тегов создана успешно!',

@@ -16,9 +16,9 @@
     // Exported props
     export let showModal = false;
     export let foodItem = null;
-    export let onSave;
-    export let onDelete;
-    export let availableTags = []; // Renamed from categories to availableTags
+    export let onSave = () => {};
+    export let onDelete = () => {};
+    export let availableTags = []; // Available tags for selection
 
     // Local state
     let foodName = "";

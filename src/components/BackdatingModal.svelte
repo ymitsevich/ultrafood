@@ -123,7 +123,7 @@
         }
     }
     
-    // Function to run the category deletion procedure
+    // Function to run the tag deletion procedure
     async function runCategoryDeletion() {
         // Check if Firebase is available
         if (!database.isAvailable()) {
@@ -135,15 +135,15 @@
             isRunningDeletion = true;
             deletionResult = null;
             
-            // Call the category deletion procedure
+            // Call the tag deletion procedure
             deletionResult = await database.deleteCategoryFields();
             
             if (deletionResult.success) {
                 // Show success notification
                 showNotification(
-                    $i18n('deleteCategoryCompleted') + ' ' + 
-                    $i18n('deleteCategoryFoodItems', { count: deletionResult.foodItemsUpdated }) + ', ' +
-                    $i18n('deleteCategoryMeals', { count: deletionResult.mealsUpdated }),
+                    $i18n('deleteTagCompleted') + ' ' + 
+                    $i18n('deleteTagFoodItems', { count: deletionResult.foodItemsUpdated }) + ', ' +
+                    $i18n('deleteTagMeals', { count: deletionResult.mealsUpdated }),
                     'success'
                 );
                 
@@ -152,12 +152,12 @@
             } else {
                 // Show error notification
                 showNotification(
-                    $i18n('deleteCategoryFailed') + (deletionResult.message ? ': ' + deletionResult.message : ''),
+                    $i18n('deleteTagFailed') + (deletionResult.message ? ': ' + deletionResult.message : ''),
                     'error'
                 );
             }
         } catch (error) {
-            console.error('Error during category deletion procedure:', error);
+            console.error('Error during tag deletion procedure:', error);
             
             deletionResult = {
                 success: false,
@@ -168,7 +168,7 @@
                 message: error.message
             };
             
-            showNotification($i18n('deleteCategoryFailed') + ': ' + error.message, 'error');
+            showNotification($i18n('deleteTagFailed') + ': ' + error.message, 'error');
         } finally {
             isRunningDeletion = false;
         }
@@ -233,7 +233,7 @@
                 <!-- Food Items Backdating -->
                 <div class="backdating-option">
                     <h3>Food Items</h3>
-                    <p class="option-description">Move category values to tags for all food items</p>
+                    <p class="option-description">Move tag values from old category fields for all food items</p>
                     
                     <div class="option-actions">
                         <button 
@@ -264,7 +264,7 @@
                 <!-- Submitted Meals Backdating -->
                 <div class="backdating-option">
                     <h3>Submitted Meals</h3>
-                    <p class="option-description">Move category values to tags for food items within meals</p>
+                    <p class="option-description">Move tag values from old category fields for food items within meals</p>
                     
                     <div class="option-actions">
                         <button 
@@ -292,10 +292,10 @@
                     </div>
                 </div>
                 
-                <!-- Category Deletion -->
+                <!-- Tag Field Deletion -->
                 <div class="backdating-option">
-                    <h3>Category Deletion</h3>
-                    <p class="option-description">Delete category values from all food items and meals</p>
+                    <h3>Tag Field Deletion</h3>
+                    <p class="option-description">Delete old category fields from all food items and meals</p>
                     
                     <div class="option-actions">
                         <button 
@@ -307,7 +307,7 @@
                                 <span class="loading-spinner-small"></span>
                                 {$i18n('deletionRunning')}
                             {:else}
-                                Delete Categories
+                                Delete Old Category Fields
                             {/if}
                         </button>
                         
@@ -326,7 +326,7 @@
                 <!-- Tags Creation -->
                 <div class="backdating-option">
                     <h3>Tags Creation</h3>
-                    <p class="option-description">Create tags for all food items based on categories</p>
+                    <p class="option-description">Create tags collection for all food items (based on legacy categories)</p>
                     
                     <div class="option-actions">
                         <button 

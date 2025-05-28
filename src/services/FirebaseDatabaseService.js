@@ -660,349 +660,6 @@ export class FirebaseDatabaseService extends DatabaseService {
   }
 
   /**
-   * Migrate categories to tags for all food items
-   * This function scans all food items and moves category values to tags array
-   * @returns {Object} Migration results with statistics
-   */
-  async migrateCategoryToTags() {
-    if (!this.db) {
-      throw new Error('Firebase not initialized');
-    }
-
-    try {
-      console.log('Starting category to tags migration procedure...');
-      
-      const foodItemsRef = collection(this.db, 'foodItems');
-      const snapshot = await getDocs(foodItemsRef);
-      
-      let processedCount = 0;
-      let updatedCount = 0;
-      const batch = writeBatch(this.db);
-      
-      snapshot.forEach((doc) => {
-        const foodId = doc.id;
-        const foodItem = doc.data();
-        processedCount++;
-        
-        // Check if the item has a category field and needs updating
-        if (foodItem.category && typeof foodItem.category === 'string') {
-          // Initialize tags array if it doesn't exist
-          let tags = Array.isArray(foodItem.tags) ? [...foodItem.tags] : [];
-          
-          // Only add category to tags if it's not already present
-          if (!tags.includes(foodItem.category)) {
-            tags.push(foodItem.category);
-            
-            // Update the document in the batch
-            const docRef = doc.ref;
-            batch.update(docRef, {
-              tags: tags,
-              updatedAt: new Date().toISOString(),
-              categoryMigratedAt: new Date().toISOString()
-            });
-            
-            console.log(`Updated food item [${foodId}]: added category "${foodItem.category}" to tags`);
-            updatedCount++;
-          }
-        }
-      });
-      
-      // Commit the batch if there are updates
-      if (updatedCount > 0) {
-        await batch.commit();
-        console.log(`Batch committed: ${updatedCount} food items updated`);
-      }
-      
-      console.log(`Category to tags migration completed: ${updatedCount}/${processedCount} food items updated`);
-      
-      return {
-        success: true,
-        processedCount,
-        updatedCount
-      };
-    } catch (error) {
-      console.error('Error during category to tags migration:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Migrate categories to tags for food items within submitted meals
-   * This function scans all submitted meals and moves category values to tags array for food items
-   * @returns {Object} Migration results with statistics
-   */
-  async migrateMealCategoryToTags() {
-    if (!this.db) {
-      throw new Error('Firebase not initialized');
-    }
-
-    try {
-      console.log('Starting meal category to tags migration procedure...');
-      
-      const mealsRef = collection(this.db, 'submittedMeals');
-      const snapshot = await getDocs(mealsRef);
-      
-      let processedCount = 0;
-      let updatedCount = 0;
-      const updatePromises = [];
-      
-      snapshot.forEach((docSnapshot) => {
-        const mealId = docSnapshot.id;
-        const meal = docSnapshot.data();
-        processedCount++;
-        
-        if (meal.items && Array.isArray(meal.items)) {
-          let mealUpdated = false;
-          
-          // Create updated items array with migrated tags
-          const updatedItems = meal.items.map(item => {
-            // Check if the item has a category field and needs updating
-            if (item.category && typeof item.category === 'string') {
-              // Initialize tags array if it doesn't exist
-              let tags = Array.isArray(item.tags) ? [...item.tags] : [];
-              
-              // Only add category to tags if it's not already present
-              if (!tags.includes(item.category)) {
-                tags.push(item.category);
-                mealUpdated = true;
-                
-                console.log(`Updated food item [${item.id || item.name}] in meal [${mealId}]: added category "${item.category}" to tags`);
-              }
-              
-              return { ...item, tags };
-            }
-            return item;
-          });
-          
-          // If any items were updated, add the update to promises array
-          if (mealUpdated) {
-            const updatePromise = updateDoc(doc(this.db, "submitted-meals", mealId), {
-              items: updatedItems,
-              updatedAt: new Date().toISOString(),
-              mealMigratedAt: new Date().toISOString() // Mark when meal migration was performed
-            });
-            
-            updatePromises.push(updatePromise);
-            updatedCount++;
-          }
-        }
-      });
-      
-      // Wait for all updates to complete
-      if (updatePromises.length > 0) {
-        await Promise.all(updatePromises);
-      }
-      
-      console.log(`Meal migration procedure completed: ${processedCount} meals processed, ${updatedCount} meals updated`);
-      
-      return {
-        success: true,
-        processedCount,
-        updatedCount
-      };
-    } catch (error) {
-      console.error("Error during meal migration procedure:", error);
-      return {
-        success: false,
-        processedCount: 0,
-        updatedCount: 0,
-        message: `Meal migration failed: ${error.message}`
-      };
-    }
-  }
-
-  /**
-   * Delete category fields from all food items and submitted meals
-   * This function removes the legacy category field from both collections
-   * @returns {Promise<{success: boolean, foodItemsProcessed: number, foodItemsUpdated: number, mealsProcessed: number, mealsUpdated: number, message?: string}>}
-   */
-  async deleteCategoryFields() {
-    // Check if Firebase is available
-    if (!this.db || !this.isFirebaseInitialized) {
-      return { 
-        success: false, 
-        foodItemsProcessed: 0,
-        foodItemsUpdated: 0,
-        mealsProcessed: 0,
-        mealsUpdated: 0,
-        message: "Database not available. Please try again later." 
-      };
-    }
-    
-    try {
-      console.log('Starting category field deletion procedure...');
-      
-      let foodItemsProcessed = 0;
-      let foodItemsUpdated = 0;
-      let mealsProcessed = 0;
-      let mealsUpdated = 0;
-      
-      // Step 1: Delete category fields from food items
-      const foodItemsSnapshot = await getDocs(collection(this.db, "food-items"));
-      foodItemsProcessed = foodItemsSnapshot.docs.length;
-      
-      for (const docSnapshot of foodItemsSnapshot.docs) {
-        const foodItem = docSnapshot.data();
-        const foodId = docSnapshot.id;
-        
-        // Check if the item has a category field to remove
-        if (foodItem.hasOwnProperty('category')) {
-          // Create update object with category field removed
-          const { category, ...updatedItem } = foodItem;
-          
-          // Update the food item in Firebase (replace entire document)
-          await setDoc(doc(this.db, "food-items", foodId), {
-            ...updatedItem,
-            updatedAt: new Date().toISOString(),
-            categoryDeletedAt: new Date().toISOString() // Mark when category was deleted
-          });
-          
-          foodItemsUpdated++;
-          console.log(`Removed category field from food item [${foodId}]`);
-        }
-      }
-      
-      // Step 2: Delete category fields from food items within submitted meals
-      const mealsSnapshot = await getDocs(collection(this.db, "submitted-meals"));
-      mealsProcessed = mealsSnapshot.docs.length;
-      
-      for (const docSnapshot of mealsSnapshot.docs) {
-        const meal = docSnapshot.data();
-        const mealId = docSnapshot.id;
-        let mealUpdated = false;
-        
-        // Check if the meal has items array
-        if (meal.items && Array.isArray(meal.items)) {
-          // Process each food item in the meal
-          const updatedItems = meal.items.map(item => {
-            // Check if the item has a category field to remove
-            if (item.hasOwnProperty('category')) {
-              const { category, ...updatedItem } = item;
-              mealUpdated = true;
-              
-              console.log(`Removed category field from food item [${item.id || item.name}] in meal [${mealId}]`);
-              
-              // Return updated item without category field
-              return updatedItem;
-            }
-            
-            // Return item unchanged if no category field
-            return item;
-          });
-          
-          // If any items were updated, save the meal back to Firebase
-          if (mealUpdated) {
-            await updateDoc(doc(this.db, "submitted-meals", mealId), {
-              items: updatedItems,
-              updatedAt: new Date().toISOString(),
-              categoryDeletedAt: new Date().toISOString() // Mark when category deletion was performed
-            });
-            
-            mealsUpdated++;
-          }
-        }
-      }
-      
-      console.log(`Category deletion procedure completed:`);
-      console.log(`- Food items: ${foodItemsProcessed} processed, ${foodItemsUpdated} updated`);
-      console.log(`- Meals: ${mealsProcessed} processed, ${mealsUpdated} updated`);
-      
-      return {
-        success: true,
-        foodItemsProcessed,
-        foodItemsUpdated,
-        mealsProcessed,
-        mealsUpdated
-      };
-    } catch (error) {
-      console.error("Error during category deletion procedure:", error);
-      return {
-        success: false,
-        foodItemsProcessed: 0,
-        foodItemsUpdated: 0,
-        mealsProcessed: 0,
-        mealsUpdated: 0,
-        message: `Category deletion failed: ${error.message}`
-      };
-    }
-  }
-
-  /**
-   * Creates a tags collection from all food items
-   * Groups all unique tags and creates a tags collection with metadata
-   * @returns {Promise<{success: boolean, tagsCreated: number, message?: string}>}
-   */
-  async createTagsCollection() {
-    // Check if Firebase is available
-    if (!this.db || !this.isFirebaseInitialized) {
-      return { 
-        success: false, 
-        tagsCreated: 0,
-        message: "Database not available. Please try again later." 
-      };
-    }
-
-    try {
-      console.log('Starting tags collection creation...');
-      
-      // Step 1: Get all food items
-      const foodItemsSnapshot = await getDocs(collection(this.db, "food-items"));
-      
-      // Step 2: Extract and count all tags
-      const tagCounts = new Map();
-      let totalFoodItems = 0;
-      
-      for (const docSnapshot of foodItemsSnapshot.docs) {
-        const foodItem = docSnapshot.data();
-        totalFoodItems++;
-        
-        // Process tags array if it exists
-        if (foodItem.tags && Array.isArray(foodItem.tags)) {
-          foodItem.tags.forEach(tag => {
-            if (typeof tag === 'string' && tag.trim()) {
-              const normalizedTag = tag.trim().toLowerCase();
-              tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
-            }
-          });
-        }
-      }
-      
-      // Step 3: Create tags collection documents
-      let tagsCreated = 0;
-      
-      for (const [tagName, count] of tagCounts.entries()) {
-        const tagDoc = {
-          name: tagName,
-          count: count,
-          createdAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString()
-        };
-        
-        // Use tag name as document ID for easy lookup
-        await setDoc(doc(this.db, "tags", tagName), tagDoc);
-        tagsCreated++;
-        
-        console.log(`Created tag document: ${tagName} (count: ${count})`);
-      }
-      
-      console.log(`Tags collection creation completed: ${tagsCreated} unique tags from ${totalFoodItems} food items`);
-      
-      return {
-        success: true,
-        tagsCreated,
-        totalFoodItems
-      };
-    } catch (error) {
-      console.error("Error during tags collection creation:", error);
-      return {
-        success: false,
-        tagsCreated: 0,
-        message: `Tags collection creation failed: ${error.message}`
-      };
-    }
-  }
-
-  /**
    * Retrieves all tags from the tags collection
    * @returns {Promise<Array>} Promise resolving to an array of tag objects with name and count
    */
@@ -1043,6 +700,79 @@ export class FirebaseDatabaseService extends DatabaseService {
     } catch (error) {
       console.error("Error getting tags:", error);
       return [];
+    }
+  }
+
+  /**
+   * Updates tag counts in the tags collection based on current food items
+   * @returns {Promise<{success: boolean, tagsUpdated: number, message?: string}>}
+   */
+  async updateTagCounts() {
+    // Check if Firebase is available
+    if (!this.db || !this.isFirebaseInitialized) {
+      return { 
+        success: false, 
+        tagsUpdated: 0,
+        message: "Database not available. Please try again later." 
+      };
+    }
+
+    try {
+      console.log('Starting tag count update...');
+      
+      // Step 1: Get all food items
+      const foodItemsSnapshot = await getDocs(collection(this.db, "food-items"));
+      
+      // Step 2: Count all tags
+      const tagCounts = new Map();
+      let totalFoodItems = 0;
+      
+      for (const docSnapshot of foodItemsSnapshot.docs) {
+        const foodItem = docSnapshot.data();
+        totalFoodItems++;
+        
+        // Process tags array if it exists
+        if (foodItem.tags && Array.isArray(foodItem.tags)) {
+          foodItem.tags.forEach(tag => {
+            if (typeof tag === 'string' && tag.trim()) {
+              const normalizedTag = tag.trim().toLowerCase();
+              tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+            }
+          });
+        }
+      }
+      
+      // Step 3: Update or create tags collection documents
+      let tagsUpdated = 0;
+      
+      for (const [tagName, count] of tagCounts.entries()) {
+        const tagDoc = {
+          name: tagName,
+          count: count,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        // Use setDoc with merge to update existing or create new
+        await setDoc(doc(this.db, "tags", tagName), tagDoc, { merge: true });
+        tagsUpdated++;
+        
+        console.log(`Updated tag document: ${tagName} (count: ${count})`);
+      }
+      
+      console.log(`Tag count update completed: ${tagsUpdated} tags updated from ${totalFoodItems} food items`);
+      
+      return {
+        success: true,
+        tagsUpdated,
+        totalFoodItems
+      };
+    } catch (error) {
+      console.error("Error during tag count update:", error);
+      return {
+        success: false,
+        tagsUpdated: 0,
+        message: `Tag count update failed: ${error.message}`
+      };
     }
   }
 }

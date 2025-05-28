@@ -138,7 +138,7 @@ body {
     width: calc(100% - 70px);
 }
 
-.categories {
+.tags {
     display: flex;
     overflow-x: auto;
     padding: 15px;
@@ -148,11 +148,11 @@ body {
     -ms-overflow-style: none; /* IE and Edge */
 }
 
-.categories::-webkit-scrollbar {
+.tags::-webkit-scrollbar {
     display: none; /* Chrome, Safari, and Opera */
 }
 
-.category-btn {
+.tag-btn {
     flex: 0 0 auto;
     padding: 15px 30px;
     margin: 0 8px;
@@ -168,7 +168,7 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }
 
-.category-btn.active {
+.tag-btn.active {
     background-color: #C26C51FF;
     color: white;
 }
@@ -404,7 +404,7 @@ body {
         font-size: 12px;
     }
     
-    .category-btn {
+    .tag-btn {
         padding: 10px 15px;
         margin: 0 6px;
         font-size: 14px;

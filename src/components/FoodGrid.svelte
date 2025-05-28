@@ -6,12 +6,12 @@
     import { fly } from 'svelte/transition';
     
     // Component props
-    export let tag = ''; // Changed from category to tag
+    export let tag = ''; // Tag name for this grid
     export let foodItems = [];
-    export let onConfigClick;
-    export let onAddNewFood;
-    export let onEditFood;
-    export let isVirtualTag = false; // Changed from isVirtualCategory to isVirtualTag
+    export let onConfigClick = () => {};
+    export let onAddNewFood = () => {};
+    export let onEditFood = () => {};
+    export let isVirtualTag = false; // Whether this is a virtual tag like "recent"
     
     // Track UI state
     let loadingImages = {};

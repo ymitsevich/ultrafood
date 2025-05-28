@@ -8,7 +8,7 @@ test.describe('Edit Food Image Update', () => {
     console.log('Navigated to the app');
     
     // Wait for the app to load
-    await page.waitForTimeout(1000); // Reduced from 2000
+    await page.waitForTimeout(1000);
     
     // Close any initial modals (like language modal)
     const initialModals = await page.locator('.modal:visible').all();
@@ -16,32 +16,32 @@ test.describe('Edit Food Image Update', () => {
       const closeButton = modal.locator('.close-modal');
       if (await closeButton.isVisible()) {
         await closeButton.click();
-        await page.waitForTimeout(200); // Reduced from 500
+        await page.waitForTimeout(200);
       }
     }
     
-    // Step 1: Switch to a regular category to see the Add New Food button
-    console.log('Step 1: Switching to a regular category');
+    // Step 1: Switch to a regular tag to see the Add New Food button
+    console.log('Step 1: Switching to a regular tag');
     
-    // Click on a regular category (not Recent) to see the add button
-    const fruitsCategory = page.locator('button.category-btn').filter({ hasText: 'Fruits' });
-    if (await fruitsCategory.isVisible()) {
-      await fruitsCategory.click();
-      console.log('Switched to Fruits category');
+    // Click on a regular tag (not Recent) to see the add button
+    const fruitsTag = page.locator('button.tag-btn').filter({ hasText: 'Fruits' });
+    if (await fruitsTag.isVisible()) {
+      await fruitsTag.click();
+      console.log('Switched to Fruits tag');
     } else {
-      // Fallback to any non-Recent category
-      const categoryButtons = await page.locator('button.category-btn').all();
-      for (const btn of categoryButtons) {
+      // Fallback to any non-Recent tag
+      const tagButtons = await page.locator('button.tag-btn').all();
+      for (const btn of tagButtons) {
         const text = await btn.textContent();
         if (text && !text.includes('Recent') && !text.includes('+')) {
           await btn.click();
-          console.log(`Switched to ${text} category`);
+          console.log(`Switched to ${text} tag`);
           break;
         }
       }
     }
     
-    await page.waitForTimeout(500); // Reduced from 1000
+    await page.waitForTimeout(500);
     
     // Step 2: Add a new food item with an image
     console.log('Step 2: Adding a new food item with image');
@@ -52,7 +52,7 @@ test.describe('Edit Food Image Update', () => {
     console.log('Clicked add new food button');
     
     // Wait for the Add Food modal to appear
-    await page.waitForSelector('.modal:visible', { timeout: 2000 }); // Reduced from 5000
+    await page.waitForSelector('.modal:visible', { timeout: 2000 });
     console.log('Add Food modal appeared');
     
     // Fill in the food name
@@ -61,7 +61,7 @@ test.describe('Edit Food Image Update', () => {
     console.log(`Entered food name: ${testFoodName}`);
     
     // Look for a Pixabay image to select (if available)
-    await page.waitForTimeout(1000); // Reduced from 2000
+    await page.waitForTimeout(1000);
     
     const pixabayImages = await page.locator('.pixabay-grid .image-item').all();
     console.log(`Found ${pixabayImages.length} Pixabay images`);
@@ -72,7 +72,7 @@ test.describe('Edit Food Image Update', () => {
       console.log('Selected first Pixabay image');
       
       // Wait a moment for selection
-      await page.waitForTimeout(500); // Reduced from 1000
+      await page.waitForTimeout(500);
       
       // Submit the form
       const submitButton = page.locator('button.submit-btn').filter({ hasText: 'Add Food' });
@@ -80,7 +80,7 @@ test.describe('Edit Food Image Update', () => {
       console.log('Submitted new food item');
       
       // Wait for the modal to close and food to be added
-      await page.waitForTimeout(1500); // Reduced from 3000
+      await page.waitForTimeout(1500);
       
       // Step 3: Find the newly added food item and click its edit button
       console.log('Step 3: Finding and editing the newly added food item');
@@ -107,7 +107,7 @@ test.describe('Edit Food Image Update', () => {
         console.log('Clicked edit button');
         
         // Wait for the Edit Food modal to appear
-        await page.waitForSelector('.modal:visible', { timeout: 2000 }); // Reduced from 5000
+        await page.waitForSelector('.modal:visible', { timeout: 2000 });
         console.log('Edit Food modal appeared');
         
         // Take screenshot of the current state
@@ -117,7 +117,7 @@ test.describe('Edit Food Image Update', () => {
         console.log('Step 4: Changing the image');
         
         // Look for different Pixabay images in the edit modal
-        await page.waitForTimeout(1000); // Reduced from 2000
+        await page.waitForTimeout(1000);
         
         const editPixabayImages = await page.locator('.pixabay-grid .image-item').all();
         console.log(`Found ${editPixabayImages.length} Pixabay images in edit modal`);
@@ -128,7 +128,7 @@ test.describe('Edit Food Image Update', () => {
           console.log('Selected second Pixabay image');
           
           // Wait for selection
-          await page.waitForTimeout(500); // Reduced from 1000
+          await page.waitForTimeout(500);
           
           // Save the changes
           const saveButton = page.locator('button.submit-btn').filter({ hasText: 'Save' });
@@ -136,7 +136,7 @@ test.describe('Edit Food Image Update', () => {
           console.log('Saved food item changes');
           
           // Wait for the modal to close
-          await page.waitForTimeout(1500); // Reduced from 3000
+          await page.waitForTimeout(1500);
           
           // Take screenshot after saving
           await page.screenshot({ path: 'test-results/after-image-edit-save.png' });
@@ -145,7 +145,7 @@ test.describe('Edit Food Image Update', () => {
           console.log('Step 5: Refreshing page to test persistence');
           
           await page.reload();
-          await page.waitForTimeout(1500); // Reduced from 3000
+          await page.waitForTimeout(1500);
           
           // Close any modals that might appear after refresh
           const postRefreshModals = await page.locator('.modal:visible').all();
@@ -153,15 +153,15 @@ test.describe('Edit Food Image Update', () => {
             const closeButton = modal.locator('.close-modal');
             if (await closeButton.isVisible()) {
               await closeButton.click();
-              await page.waitForTimeout(200); // Reduced from 500
+              await page.waitForTimeout(200);
             }
           }
           
-          // Switch back to the same category after refresh
-          const categoryAfterRefresh = page.locator('button.category-btn').filter({ hasText: 'Fruits' });
-          if (await categoryAfterRefresh.isVisible()) {
-            await categoryAfterRefresh.click();
-            await page.waitForTimeout(500); // Reduced from 1000
+          // Switch back to the same tag after refresh
+          const tagAfterRefresh = page.locator('button.tag-btn').filter({ hasText: 'Fruits' });
+          if (await tagAfterRefresh.isVisible()) {
+            await tagAfterRefresh.click();
+            await page.waitForTimeout(500);
           }
           
           // Take screenshot after refresh
@@ -195,8 +195,8 @@ test.describe('Edit Food Image Update', () => {
               const editButtonAfterRefresh = targetFoodAfterRefresh.locator('.edit-btn');
               await editButtonAfterRefresh.click();
               
-              await page.waitForSelector('.modal:visible', { timeout: 2000 }); // Reduced from 5000
-              await page.waitForTimeout(1000); // Reduced from 2000
+              await page.waitForSelector('.modal:visible', { timeout: 2000 });
+              await page.waitForTimeout(1000);
               
               // Take screenshot of edit modal after refresh
               await page.screenshot({ path: 'test-results/edit-modal-after-refresh.png' });
