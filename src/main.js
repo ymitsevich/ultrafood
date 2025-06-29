@@ -10,8 +10,15 @@ console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
 const services = {
     database: container.resolve('database'),
     imageHosting: container.resolve('imageHosting'),
-    imageSearch: container.resolve('imageSearch')
+    imageSearch: container.resolve('imageSearch'),
+    auth: container.resolve('auth')
 };
+
+// Make container available for testing
+if (process.env.NODE_ENV === 'test') {
+    window.__container = container;
+    console.log('Container exposed for testing');
+}
 
 const app = new App({
     target: document.getElementById('app'),

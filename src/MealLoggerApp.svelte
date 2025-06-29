@@ -24,7 +24,7 @@
     export let services;
     
     // Extract services from the props using new generic names
-    const { database, imageHosting, imageSearch } = services;
+    const { database, imageHosting, imageSearch, auth } = services;
     
     // Make services available to all child components via context
     setContext('services', services);
@@ -78,12 +78,25 @@
     let backupResult = null;
     let showBackupModal = false;
     
-    // Menu items configuration
-    let menuItems = [
+    // Authentication state
+    let currentUser = null;
+    let isAuthLoading = false;
+    
+    // Menu items configuration - reactive based on auth state
+    $: menuItems = [
         {
             icon: '🌐',
             label: () => $i18n('languageSettings'),
             action: openLanguageModal
+        },
+        {
+            type: 'divider'
+        },
+        // Authentication item - login or logout based on auth state
+        {
+            icon: currentUser ? '👤' : '🔐',
+            label: () => currentUser ? $i18n('logout') : $i18n('loginWithGoogle'),
+            action: currentUser ? handleLogout : handleLogin
         },
         {
             type: 'divider'
@@ -128,45 +141,82 @@
     
     // Load food items and submitted meals from database on component mount
     onMount(async () => {
-        try {
-            isLoading = true;
-            loadError = null;
-            
-            // Load tags from database first
-            await loadTags();
-            
-            // Get food items from database
-            const foodItems = await database.getFoodItems();
-            
-            if (foodItems && foodItems.length > 0) {
-                console.log('Loaded food items from database:', foodItems);
+        // Set up authentication state listener first
+        if (auth.isAvailable()) {
+            const unsubscribe = auth.onAuthStateChanged(async (user) => {
+                currentUser = user;
+                console.log('Auth state changed:', user ? 'authenticated' : 'not authenticated');
                 
-                // Organize food items by tags
-                organizeFoodByTags(foodItems);
-            } else {
-                console.log('No items from database, using default data');
-                usingLocalData = true;
-            }
+                // Load data when authentication state changes
+                await loadDataBasedOnAuthState();
+            });
             
-            // Load submitted meals and update recent foods
-            await loadSubmittedMeals();
-            updateRecentFoods();
-        } catch (error) {
-            console.error('Error loading food items from database:', error);
-            loadError = 'Using local data - could not connect to cloud database.';
-            usingLocalData = true;
-        } finally {
-            isLoading = false;
+            // Clean up on component destroy
+            return () => {
+                unsubscribe();
+                window.removeEventListener('foodDataRefresh', handleFoodDataRefresh);
+            };
+        } else {
+            // If auth service is not available, still load data
+            await loadDataBasedOnAuthState();
         }
         
         // Listen for food data refresh events from the backdating modal
         window.addEventListener('foodDataRefresh', handleFoodDataRefresh);
-        
-        // Cleanup event listener on component destroy
-        return () => {
-            window.removeEventListener('foodDataRefresh', handleFoodDataRefresh);
-        };
     });
+
+    // Load data based on authentication state
+    async function loadDataBasedOnAuthState() {
+        try {
+            isLoading = true;
+            loadError = null;
+            
+            // Reset data first
+            foodData = {};
+            availableTags = [];
+            submittedMeals = [];
+            recentFoods = [];
+            
+            // Only load data if user is authenticated
+            if (currentUser) {
+                console.log('User authenticated, loading data from database...');
+                
+                // Load tags from database first
+                await loadTags();
+                
+                // Get food items from database
+                const foodItems = await database.getFoodItems();
+                
+                if (foodItems && foodItems.length > 0) {
+                    console.log('Loaded food items from database:', foodItems);
+                    
+                    // Organize food items by tags
+                    organizeFoodByTags(foodItems);
+                } else {
+                    console.log('No items from database');
+                }
+                
+                // Load submitted meals and update recent foods
+                await loadSubmittedMeals();
+                updateRecentFoods();
+                
+                usingLocalData = false;
+                loadError = null;
+            } else {
+                console.log('User not authenticated, showing empty state');
+                // Show empty state for non-authenticated users
+                loadError = null;
+                usingLocalData = false;
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+            if (currentUser) {
+                loadError = 'Failed to load data from database.';
+            }
+        } finally {
+            isLoading = false;
+        }
+    }
 
     // Organize food items by their tags
     function organizeFoodByTags(foodItems) {
@@ -702,6 +752,63 @@
             showNotification('Failed to refresh food data', 'error');
         }
     }
+    
+    // Authentication functions
+    async function handleLogin() {
+        if (!auth.isAvailable()) {
+            showNotification($i18n('authRequired'), 'error');
+            return;
+        }
+        
+        try {
+            isAuthLoading = true;
+            const user = await auth.signInWithGoogle();
+            
+            if (user) {
+                currentUser = user;
+                showNotification($i18n('welcomeUser', { name: user.displayName || user.email }), 'success');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            showNotification($i18n('loginFailed'), 'error');
+        } finally {
+            isAuthLoading = false;
+        }
+    }
+    
+    async function handleLogout() {
+        if (!auth.isAvailable()) {
+            return;
+        }
+        
+        try {
+            isAuthLoading = true;
+            await auth.signOut();
+            currentUser = null;
+            showNotification($i18n('logoutSuccess'), 'success');
+        } catch (error) {
+            console.error('Logout error:', error);
+            showNotification($i18n('logoutFailed'), 'error');
+        } finally {
+            isAuthLoading = false;
+        }
+    }
+    
+    // Set up authentication state listener on mount
+    onMount(() => {
+        if (auth.isAvailable()) {
+            // Set up auth state listener
+            const unsubscribe = auth.onAuthStateChanged((user) => {
+                currentUser = user;
+                if (user && !isAuthLoading) {
+                    console.log('User authenticated:', user);
+                }
+            });
+            
+            // Clean up on component destroy
+            return unsubscribe;
+        }
+    });
 </script>
 
 <div class="meal-logger">
@@ -744,8 +851,8 @@
                         {tag.name.charAt(0).toUpperCase() + tag.name.slice(1)}
                     </button>
                 {/each}
-            {:else}
-                <!-- No tags available, show message or fallback content -->
+            {:else if currentUser}
+                <!-- Authenticated user with no tags available -->
                 <div class="no-tags-message">
                     <span>{t('noTagsAvailable')}</span>
                 </div>
@@ -766,8 +873,8 @@
             <div class="loading-state">
                 <p>{t('loading')}</p>
             </div>
-        {:else}
-            <!-- Food Grid Component - Handle Recent Virtual Tag and Tags -->
+        {:else if currentUser}
+            <!-- Authenticated user - show FoodGrid -->
             <FoodGrid
                 tag={currentTag}
                 foodItems={currentTag === RECENT_TAG ? recentFoods : 
@@ -788,6 +895,20 @@
                     </p>
                 </div>
             {/if}
+        {:else}
+            <!-- Non-authenticated user - show login prompt -->
+            <div class="login-prompt">
+                <div class="login-prompt-content">
+                    <div class="login-icon">🍽️</div>
+                    <h2>{t('pleaseLoginToStart')}</h2>
+                    <p class="login-description">{t('loginToAccessFeatures')}</p>
+                    <p class="login-instructions">{t('clickMenuToLogin')}</p>
+                    
+                    <button class="login-cta-button" on:click={handleLogin}>
+                        🔐 {t('loginWithGoogle')}
+                    </button>
+                </div>
+            </div>
         {/if}
     </div>
 
@@ -1158,29 +1279,86 @@
         color: #888;
     }
 
-    /* Status messages */
-    .status-message {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 5;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    /* Login prompt for non-authenticated users */
+    .login-prompt {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 400px;
+        padding: 20px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     }
 
-    .status-message.info {
-        background-color: #e3f2fd;
-        color: #0d47a1;
-        border: 1px solid #bbdefb;
+    .login-prompt-content {
+        text-align: center;
+        background: white;
+        padding: 40px 30px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        width: 100%;
     }
 
-    .status-message.error {
-        background-color: #ffebee;
-        color: #c62828;
-        border: 1px solid #ffcdd2;
+    .login-icon {
+        font-size: 3rem;
+        margin-bottom: 20px;
+        animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-10px);
+        }
+        60% {
+            transform: translateY(-5px);
+        }
+    }
+
+    .login-prompt h2 {
+        color: #333;
+        margin-bottom: 15px;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .login-description {
+        color: #666;
+        margin-bottom: 10px;
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    .login-instructions {
+        color: #888;
+        margin-bottom: 25px;
+        font-size: 0.9rem;
+        font-style: italic;
+    }
+
+    .login-cta-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 25px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .login-cta-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4c93 100%);
+    }
+
+    .login-cta-button:active {
+        transform: translateY(0);
     }
 
     /* Modal */

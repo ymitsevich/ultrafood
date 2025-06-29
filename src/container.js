@@ -5,6 +5,8 @@ import { PixabayImageSearchService } from './services/PixabayImageSearchService.
 import { InMemoryDatabaseService } from './services/InMemoryDatabaseService.js';
 import { LocalImageHostingService } from './services/LocalImageHostingService.js';
 import { MockImageSearchService } from './services/MockImageSearchService.js';
+import { FirebaseAuthService } from './services/FirebaseAuthService.js';
+import { MockAuthService } from './services/MockAuthService.js';
 
 // Create the container
 const container = createContainer();
@@ -13,18 +15,20 @@ const container = createContainer();
 const isTest = process.env.NODE_ENV === 'test';
 
 // Create service instances based on environment
-let databaseService, imageHostingService, imageSearchService;
+let databaseService, imageHostingService, imageSearchService, authService;
 
 if (isTest) {
   console.log('[Container] Running in TEST environment, using mock/local services');
   databaseService = new InMemoryDatabaseService();
   imageHostingService = new LocalImageHostingService();
   imageSearchService = new MockImageSearchService();
+  authService = new MockAuthService();
 } else {
   console.log(`[Container] Running in ${process.env.NODE_ENV || 'development'} environment, using production services`);
   databaseService = new FirebaseDatabaseService();
   imageHostingService = new CloudinaryImageHostingService();
   imageSearchService = new PixabayImageSearchService();
+  authService = new FirebaseAuthService();
 }
 
 // Register all services
@@ -33,6 +37,7 @@ container.register({
   database: asValue(databaseService),
   imageHosting: asValue(imageHostingService),
   imageSearch: asValue(imageSearchService),
+  auth: asValue(authService),
   
   // Environment variables and configuration
   isTestEnv: asValue(isTest)

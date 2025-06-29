@@ -1,24 +1,12 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
+import { setupTest } from './test-utils.js';
 
 test.describe('Multi-Tag Functionality', () => {
   test.beforeEach(async ({ page }) => {
     console.log('Setting up multi-tag functionality test');
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    
-    // Close any open modals first (like language modal)
-    const modals = await page.locator('.modal:visible').all();
-    for (const modal of modals) {
-      const closeButton = modal.locator('.close-modal');
-      if (await closeButton.isVisible()) {
-        await closeButton.click();
-        await page.waitForTimeout(200);
-      }
-    }
-    
-    // Wait for the app to be ready
-    await page.waitForSelector('button.tag-btn', { timeout: 5000 });
+    // Use our authentication-aware setup
+    await setupTest(page);
     console.log('App loaded successfully');
   });
 

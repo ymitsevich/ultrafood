@@ -1,5 +1,6 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
+import { setupTest } from './test-utils.js';
 
 // Debug environment information
 console.log('----------------------------------------');
@@ -18,11 +19,8 @@ console.log('----------------------------------------');
 
 // Debug test to examine the UI behavior
 test('Debug UI elements and interactions', async ({ page }) => {
-  // Navigate to the app
-  await page.goto('/');
-  
-  // Wait for the food grid to load
-  await page.waitForSelector('.food-grid', { timeout: 3000 }); // Reduced from 10000
+  // Setup test (authentication, navigation, cleanup)
+  await setupTest(page);
   
   // Log page title and URL to confirm we're on the right page
   console.log('Page title:', await page.title());

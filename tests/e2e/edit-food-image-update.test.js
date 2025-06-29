@@ -1,24 +1,12 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
+import { setupTest } from './test-utils.js';
 
 test.describe('Edit Food Image Update', () => {
   test('should add a food item with image, edit the image, and persist after page refresh', async ({ page }) => {
-    // Navigate to the app using the correct test URL
-    await page.goto('http://localhost:3123/ultrafood/');
+    // Setup test (authentication, navigation, cleanup)
+    await setupTest(page);
     console.log('Navigated to the app');
-    
-    // Wait for the app to load
-    await page.waitForTimeout(1000);
-    
-    // Close any initial modals (like language modal)
-    const initialModals = await page.locator('.modal:visible').all();
-    for (const modal of initialModals) {
-      const closeButton = modal.locator('.close-modal');
-      if (await closeButton.isVisible()) {
-        await closeButton.click();
-        await page.waitForTimeout(200);
-      }
-    }
     
     // Step 1: Switch to a regular tag to see the Add New Food button
     console.log('Step 1: Switching to a regular tag');

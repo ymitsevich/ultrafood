@@ -15,7 +15,11 @@ export default defineConfig({
         port: 3123,
         host: '0.0.0.0',
         strictPort: true,
-        hmr: false // Disable HMR globally
+        hmr: false, // Disable HMR globally
+        headers: {
+            'Cross-Origin-Opener-Policy': 'same-origin-allow-popups'
+            // Removed Cross-Origin-Embedder-Policy to allow cross-origin images
+        }
     },
     build: {
         outDir: 'dist',

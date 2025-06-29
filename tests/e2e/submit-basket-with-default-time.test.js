@@ -1,28 +1,11 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
+import { setupTest } from './test-utils.js';
 
 test.describe('Basket submission functionality', () => {
   test('should submit the basket with default (now) time using the checkmark button', async ({ page }) => {
-    // Go to the application
-    await page.goto('/');
-    
-    // Wait for the page to load (food grid should be visible)
-    await page.waitForSelector('.food-grid', { timeout: 3000 }); // Reduced from 10000
-    
-    // Close any language modal if present
-    const languageModalSelector = '.modal-content.language-modal';
-    if (await page.locator(languageModalSelector).isVisible()) {
-      await page.locator(`${languageModalSelector} .close-modal`).click();
-      await page.waitForTimeout(200); // Reduced from 500
-    }
-    
-    // Test setup: ensure we have an empty basket to start
-    console.log('Clearing any existing basket items');
-    await page.evaluate(() => {
-      if (window.localStorage) {
-        window.localStorage.removeItem('basket');
-      }
-    });
+    // Setup test (authentication, navigation, cleanup)
+    await setupTest(page);
     
     // Take a screenshot of the initial state
     await page.screenshot({ path: 'test-results/submit-basket-initial.png' });

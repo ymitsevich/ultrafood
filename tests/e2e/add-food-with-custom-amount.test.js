@@ -1,34 +1,11 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
+import { setupTest } from './test-utils.js';
 
 test.describe('Custom amount functionality', () => {
   test('should add a food item with custom amount to the basket', async ({ page }) => {
-    // Go to the application
-    await page.goto('/');
-    
-    // Wait for the page to load (food grid should be visible)
-    await page.waitForSelector('.food-grid', { timeout: 3000 }); // Reduced from 10000
-    
-    // Close any language modal if present
-    const languageModalSelector = '.modal-content.language-modal';
-    if (await page.locator(languageModalSelector).isVisible()) {
-      await page.locator(`${languageModalSelector} .close-modal`).click();
-      await page.waitForTimeout(200); // Reduced from 500
-    }
-    
-    // Test setup: ensure we have an empty basket to start
-    console.log('Clearing any existing basket items');
-    await page.evaluate(() => {
-      if (window.localStorage) {
-        // Try to reset any localStorage values that might affect the basket
-        window.localStorage.removeItem('basket');
-      }
-      
-      // Directly reset the basket if the store is accessible
-      if (window.basket && typeof window.basket.clear === 'function') {
-        window.basket.clear();
-      }
-    });
+    // Setup test (authentication, navigation, cleanup)
+    await setupTest(page);
     
     // Make sure all modals are closed before proceeding
     const visibleModals = await page.locator('.modal:visible').all();

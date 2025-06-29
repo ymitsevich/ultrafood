@@ -39,6 +39,12 @@ export const translations = {
         // Tag system
         errorLoadingTags: 'Error loading tags',
         loading: 'Loading...',
+        noTagsAvailable: 'No tags available',
+        
+        // Non-authenticated user prompts
+        pleaseLoginToStart: 'Please log in to start tracking your meals',
+        loginToAccessFeatures: 'Login to access all features and save your data to the cloud',
+        clickMenuToLogin: 'Click the menu (☰) in the bottom-right corner to log in with Google',
         
         // Basket sidebar
         emptyBasket: 'Your basket is empty',
@@ -109,6 +115,17 @@ export const translations = {
         languageSettings: 'Language Settings',
         selectLanguage: 'Select language:',
         applyLanguage: 'Apply',
+        
+        // Authentication
+        login: 'Login',
+        logout: 'Logout',
+        loginWithGoogle: 'Login with Google',
+        loginSuccess: 'Successfully logged in!',
+        logoutSuccess: 'Successfully logged out!',
+        loginFailed: 'Login failed. Please try again.',
+        logoutFailed: 'Logout failed. Please try again.',
+        authRequired: 'Please login to access this feature.',
+        welcomeUser: 'Welcome, {name}!',
         
         // Messages
         mealLogged: 'Logged {count} items to your meal!',
@@ -188,6 +205,12 @@ export const translations = {
         // Tag system
         errorLoadingTags: 'Ошибка загрузки тегов',
         loading: 'Загрузка...',
+        noTagsAvailable: 'Теги не найдены',
+        
+        // Non-authenticated user prompts
+        pleaseLoginToStart: 'Пожалуйста, войдите в систему, чтобы начать отслеживать приемы пищи',
+        loginToAccessFeatures: 'Войдите в систему для доступа ко всем функциям и сохранения данных в облаке',
+        clickMenuToLogin: 'Нажмите меню (☰) в правом нижнем углу, чтобы войти через Google',
         
         // Basket sidebar
         emptyBasket: 'Ваша корзина пуста',
@@ -258,6 +281,17 @@ export const translations = {
         languageSettings: 'Настройки языка',
         selectLanguage: 'Выберите язык:',
         applyLanguage: 'Применить',
+        
+        // Authentication
+        login: 'Войти',
+        logout: 'Выйти',
+        loginWithGoogle: 'Войти через Google',
+        loginSuccess: 'Успешный вход!',
+        logoutSuccess: 'Успешный выход!',
+        loginFailed: 'Ошибка входа. Попробуйте еще раз.',
+        logoutFailed: 'Ошибка выхода. Попробуйте еще раз.',
+        authRequired: 'Пожалуйста, войдите в систему для доступа к этой функции.',
+        welcomeUser: 'Добро пожаловать, {name}!',
         
         // Messages
         mealLogged: 'Записано {count} продуктов в ваш прием пищи!',
